@@ -22,6 +22,11 @@ export default function ReadingScreen() {
   const [readings, setReadings] = useState<DliReading[]>([]);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
 
+  console.log(
+    "Hello This is Device Data Here ?????????????:>>>>>>>>>>",
+    deviceData,
+  );
+
   useEffect(() => {
     if (deviceData) {
       console.log("devive Data is :", deviceData);
@@ -73,15 +78,54 @@ export default function ReadingScreen() {
 
       <View style={styles.divider} />
 
-      {/* 🔥 Device Info Section */}
+      <Text>Setup Device </Text>
       {deviceInfo && (
         <View style={styles.deviceBox}>
           <Text style={styles.deviceText}>MAC: {deviceInfo.mac}</Text>
           <Text style={styles.deviceText}>SSID: {deviceInfo.ssid}</Text>
           <Text style={styles.deviceText}>Timezone: {deviceInfo.timezone}</Text>
+
+          {/* Buttons */}
+          <View style={{ flexDirection: "row", gap: 10, marginTop: 10 }}>
+            {deviceInfo.jsonPath && (
+              <Text
+                style={styles.button}
+                onPress={() => {
+                  // Open JSON file in browser (or WebView)
+                  const url = `http://192.168.4.1${deviceInfo.jsonPath}`;
+                  console.log("Open JSON:", url);
+                  // use Linking API to open in default browser
+                  import("react-native").then(({ Linking }) =>
+                    Linking.openURL(url),
+                  );
+                }}
+              >
+                View JSON
+              </Text>
+            )}
+
+            {deviceInfo.restartPath && (
+              <Text
+                style={[styles.button, { backgroundColor: "#2196F3" }]}
+                onPress={async () => {
+                  // Call the restart endpoint
+                  try {
+                    await fetch(`http://192.168.4.1${deviceInfo.restartPath}`, {
+                      method: "POST",
+                    });
+                    alert("Device Restarted!");
+                  } catch (err) {
+                    console.error("Restart failed:", err);
+                    alert("Failed to restart device.");
+                  }
+                }}
+              >
+                Restart Device
+              </Text>
+            )}
+          </View>
         </View>
       )}
-
       <FlatList
         data={readings}
         keyExtractor={(item, index) => index.toString()}
