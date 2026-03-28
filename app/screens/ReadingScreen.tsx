@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import { getDeviceJson } from "../services/api";
+import { extractSetupInfo } from "../services/extracter";
 
 type DliReading = {
   value: number;
@@ -8,16 +9,44 @@ type DliReading = {
   date: string;
 };
 
+type DeviceInfo = {
+  mac: string;
+  ssid: string;
+  timezone: string;
+};
+
 export default function ReadingScreen() {
   const [readings, setReadings] = useState<DliReading[]>([]);
+  const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
 
+  // 🔹 TEMP: simulate setup response (remove when using navigation)
+  useEffect(() => {
+    const mockHtml = `
+      <strong>AP MAC Address:</strong> F0:24:F9:2C:DA:10
+      <strong>WiFi SSID:</strong> Hashmi347
+      <strong>Timezone:</strong> 5
+    `;
+
+    const parsed = extractSetupInfo(mockHtml);
+    setDeviceInfo(parsed);
+  }, []);
+
+  // 🔹 Fetch readings
   useEffect(() => {
     const fetchData = async () => {
       try {
         const data = await getDeviceJson();
-        setReadings(data.dli_history || []);
+        console.log("API DATA:", data);
+
+        if (Array.isArray(data.dli_history)) {
+          setReadings(data.dli_history);
+        } else if (data.value) {
+          setReadings([data]);
+        } else {
+          setReadings([]);
+        }
       } catch (error) {
-        console.error(error);
+        console.error("Fetch error:", error);
       }
     };
 
@@ -29,7 +58,6 @@ export default function ReadingScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Decorative accents */}
       <View style={styles.accentTopRight} />
       <View style={styles.accentBottomLeft} />
 
@@ -46,6 +74,15 @@ export default function ReadingScreen() {
 
       <View style={styles.divider} />
 
+      {/* 🔥 Device Info Section */}
+      {deviceInfo && (
+        <View style={styles.deviceBox}>
+          <Text style={styles.deviceText}>MAC: {deviceInfo.mac}</Text>
+          <Text style={styles.deviceText}>SSID: {deviceInfo.ssid}</Text>
+          <Text style={styles.deviceText}>Timezone: {deviceInfo.timezone}</Text>
+        </View>
+      )}
+
       <FlatList
         data={readings}
         keyExtractor={(item, index) => index.toString()}
@@ -53,7 +90,6 @@ export default function ReadingScreen() {
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
           <View style={styles.emptyBox}>
-            <Text style={styles.emptyIcon}>📡</Text>
             <Text style={styles.emptyText}>No readings yet.</Text>
             <Text style={styles.emptySubText}>
               Data will appear once the device syncs.
@@ -62,19 +98,16 @@ export default function ReadingScreen() {
         }
         renderItem={({ item, index }) => (
           <View style={styles.card}>
-            {/* Index badge */}
             <View style={styles.indexBadge}>
               <Text style={styles.indexText}>#{index + 1}</Text>
             </View>
 
             <View style={styles.cardBody}>
-              {/* Value — highlighted prominently */}
               <View style={styles.valueRow}>
                 <Text style={styles.valueNumber}>{item.value}</Text>
                 <Text style={styles.valueUnit}>mol/m²/d</Text>
               </View>
 
-              {/* Time & Date row */}
               <View style={styles.metaRow}>
                 <View style={styles.metaChip}>
                   <Text style={styles.metaLabel}>TIME</Text>
@@ -96,7 +129,6 @@ export default function ReadingScreen() {
 const NAVY = "#0B1F3A";
 const TEAL = "#00C9A7";
 const CARD_BG = "#F0F4FA";
-const BORDER = "#D5DDE8";
 const LABEL_COLOR = "#5A7290";
 
 const styles = StyleSheet.create({
@@ -128,7 +160,6 @@ const styles = StyleSheet.create({
     opacity: 0.1,
   },
 
-  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -154,13 +185,11 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     letterSpacing: 2,
     color: TEAL,
-    marginBottom: 2,
   },
   title: {
     fontSize: 20,
     fontWeight: "800",
     color: "#FFFFFF",
-    letterSpacing: -0.3,
   },
 
   divider: {
@@ -169,23 +198,29 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
 
+  deviceBox: {
+    backgroundColor: "#112240",
+    padding: 12,
+    borderRadius: 10,
+    marginBottom: 16,
+  },
+  deviceText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    marginBottom: 2,
+  },
+
   listContent: {
     paddingBottom: 40,
     gap: 12,
   },
 
-  // Card
   card: {
     backgroundColor: CARD_BG,
     borderRadius: 18,
     padding: 18,
     flexDirection: "row",
-    alignItems: "flex-start",
     gap: 14,
-    shadowColor: "#000",
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    shadowOffset: { width: 0, height: 4 },
     elevation: 5,
   },
   indexBadge: {
@@ -195,13 +230,11 @@ const styles = StyleSheet.create({
     backgroundColor: NAVY,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
   },
   indexText: {
     fontSize: 11,
     fontWeight: "700",
     color: TEAL,
-    letterSpacing: 0.5,
   },
   cardBody: {
     flex: 1,
@@ -216,13 +249,10 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: "800",
     color: NAVY,
-    letterSpacing: -0.5,
   },
   valueUnit: {
     fontSize: 12,
-    fontWeight: "600",
     color: LABEL_COLOR,
-    letterSpacing: 0.3,
   },
   metaRow: {
     flexDirection: "row",
@@ -231,16 +261,13 @@ const styles = StyleSheet.create({
   metaChip: {
     backgroundColor: "#E2EAF4",
     borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    padding: 8,
     flex: 1,
   },
   metaLabel: {
     fontSize: 9,
     fontWeight: "700",
-    letterSpacing: 1.5,
     color: LABEL_COLOR,
-    marginBottom: 2,
   },
   metaValue: {
     fontSize: 13,
@@ -248,15 +275,9 @@ const styles = StyleSheet.create({
     color: NAVY,
   },
 
-  // Empty state
   emptyBox: {
     marginTop: 80,
     alignItems: "center",
-    gap: 8,
-  },
-  emptyIcon: {
-    fontSize: 40,
-    marginBottom: 8,
   },
   emptyText: {
     fontSize: 16,
