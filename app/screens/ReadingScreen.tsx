@@ -1,3 +1,4 @@
+import { useRoute } from "@react-navigation/native";
 import { useEffect, useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 import { getDeviceJson } from "../services/api";
@@ -16,20 +17,18 @@ type DeviceInfo = {
 };
 
 export default function ReadingScreen() {
+  const route = useRoute();
+  const deviceData = route?.params?.deviceData;
   const [readings, setReadings] = useState<DliReading[]>([]);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
 
-  // 🔹 TEMP: simulate setup response (remove when using navigation)
   useEffect(() => {
-    const mockHtml = `
-      <strong>AP MAC Address:</strong> F0:24:F9:2C:DA:10
-      <strong>WiFi SSID:</strong> Hashmi347
-      <strong>Timezone:</strong> 5
-    `;
-
-    const parsed = extractSetupInfo(mockHtml);
-    setDeviceInfo(parsed);
-  }, []);
+    if (deviceData) {
+      console.log("devive Data is :", deviceData);
+      const parsed = extractSetupInfo(deviceData);
+      setDeviceInfo(parsed);
+    }
+  }, [deviceData]);
 
   // 🔹 Fetch readings
   useEffect(() => {
