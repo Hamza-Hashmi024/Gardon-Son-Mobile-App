@@ -13,12 +13,10 @@ export default function SetupScreen({ navigation }: any) {
   const [ssid, setSsid] = useState("");
   const [password, setPassword] = useState("");
   const [timezone, setTimezone] = useState("5");
-  const [response, setResponse] = useState("");
 
   const handleSubmit = async () => {
     try {
       const data = await sendDeviceConfig(ssid, password, timezone);
-      setResponse(data);
       Alert.alert("Device Setup", "Setup Complete! Device is configured.");
 
       navigation.navigate("Dashboard", { deviceData: data });

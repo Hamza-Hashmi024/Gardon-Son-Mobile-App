@@ -11,14 +11,20 @@ type DliReading = {
 };
 
 type DeviceInfo = {
-  mac: string;
-  ssid: string;
-  timezone: string;
+  mac: string | null;
+  ssid: string | null;
+  timezone: string | null;
+  jsonPath: string | null;
+  restartPath: string | null;
+};
+
+type ReadingRouteParams = {
+  deviceData?: string;
 };
 
 export default function ReadingScreen() {
   const route = useRoute();
-  const deviceData = route?.params?.deviceData;
+  const deviceData = (route.params as ReadingRouteParams | undefined)?.deviceData;
   const [readings, setReadings] = useState<DliReading[]>([]);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
 
@@ -251,6 +257,16 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontSize: 12,
     marginBottom: 2,
+  },
+  button: {
+    backgroundColor: TEAL,
+    color: NAVY,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    overflow: "hidden",
+    fontSize: 13,
+    fontWeight: "700",
   },
 
   listContent: {

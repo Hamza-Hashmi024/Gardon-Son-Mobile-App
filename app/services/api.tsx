@@ -1,5 +1,33 @@
 export const DEVICE_IP = "http://192.168.4.1";
 
+const fetchWithTimeout = async (
+  input: string,
+  init?: RequestInit,
+  timeoutMs = 5000,
+) => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
+};
+
+export const checkDeviceConnection = async () => {
+  try {
+    await fetchWithTimeout(`${DEVICE_IP}/`, undefined, 3000);
+    return true;
+  } catch (error) {
+    console.error("❌ checkDeviceConnection error:", error);
+    return false;
+  }
+};
+
 export const sendDeviceConfig = async (
   ssid: string,
   password: string,
@@ -7,7 +35,7 @@ export const sendDeviceConfig = async (
 ) => {
   const url = `${DEVICE_IP}/get?ssid=${encodeURIComponent(ssid)}&password=${encodeURIComponent(password)}&timezone=${timezone}`;
   console.log(url);
-  const response = await fetch(url);
+  const response = await fetchWithTimeout(url);
   console.log(response);
   const text = await response.text();
   console.log(text);
@@ -26,7 +54,7 @@ export const getDeviceJson = async () => {
     const url = `${DEVICE_IP}/json`;
     console.log("Fetching:", url);
 
-    const response = await fetch(url);
+    const response = await fetchWithTimeout(url);
 
     // ❗ detect wrong response type
     const contentType = response.headers.get("content-type");
