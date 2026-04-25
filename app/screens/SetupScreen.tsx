@@ -1,4 +1,4 @@
-import { sendDeviceConfig } from "@/app/services/api";
+import { sendDeviceConfig } from "@/services/api";
 import { useState } from "react";
 import {
   Alert,
@@ -13,16 +13,26 @@ export default function SetupScreen({ navigation }: any) {
   const [ssid, setSsid] = useState("");
   const [password, setPassword] = useState("");
   const [timezone, setTimezone] = useState("5");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     try {
-      const data = await sendDeviceConfig(ssid, password, timezone);
-      Alert.alert("Device Setup", "Setup Complete! Device is configured.");
-
-      navigation.navigate("Dashboard", { deviceData: data });
+      setIsSubmitting(true);
+      const result = await sendDeviceConfig(ssid, password, timezone);
+      Alert.alert(
+        "Device Setup",
+        `Setup complete. SSID "${result.storedConfig.ssid}" and timezone "${result.storedConfig.timezone}" are stored on the Garden Sun device.`,
+      );
+      navigation.replace("Dashboard", { deviceData: result.responseText });
     } catch (error) {
-      Alert.alert("Error", "Unable to configure device.");
-      console.error(error);
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Unable to configure device.";
+
+      Alert.alert("Setup Failed", message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -89,8 +99,11 @@ export default function SetupScreen({ navigation }: any) {
           style={styles.button}
           onPress={handleSubmit}
           activeOpacity={0.85}
+          disabled={isSubmitting}
         >
-          <Text style={styles.buttonText}>Save & Continue →</Text>
+          <Text style={styles.buttonText}>
+            {isSubmitting ? "Saving..." : "Save & Continue →"}
+          </Text>
         </TouchableOpacity>
 
         <Text style={styles.footerNote}>

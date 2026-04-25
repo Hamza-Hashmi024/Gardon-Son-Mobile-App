@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { AppState, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import * as Linking from "expo-linking";
 
-import { checkDeviceConnection } from "@/app/services/api";
+import { checkDeviceConnection } from "@/services/api";
 
 export default function ConnectionScreen({ navigation }: any) {
   const [isChecking, setIsChecking] = useState(true);

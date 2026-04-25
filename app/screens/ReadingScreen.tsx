@@ -1,8 +1,8 @@
+import { getDeviceJson } from "@/services/api";
+import { extractSetupInfo } from "@/services/extracter";
 import { useRoute } from "@react-navigation/native";
 import { useEffect, useState } from "react";
 import { FlatList, StyleSheet, Text, View } from "react-native";
-import { getDeviceJson } from "../services/api";
-import { extractSetupInfo } from "../services/extracter";
 
 type DliReading = {
   value: number;
@@ -24,18 +24,13 @@ type ReadingRouteParams = {
 
 export default function ReadingScreen() {
   const route = useRoute();
-  const deviceData = (route.params as ReadingRouteParams | undefined)?.deviceData;
+  const deviceData = (route.params as ReadingRouteParams | undefined)
+    ?.deviceData;
   const [readings, setReadings] = useState<DliReading[]>([]);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
 
-  console.log(
-    "Hello This is Device Data Here ?????????????:>>>>>>>>>>",
-    deviceData,
-  );
-
   useEffect(() => {
     if (deviceData) {
-      console.log("devive Data is :", deviceData);
       const parsed = extractSetupInfo(deviceData);
       setDeviceInfo(parsed);
     }
@@ -46,7 +41,6 @@ export default function ReadingScreen() {
     const fetchData = async () => {
       try {
         const data = await getDeviceJson();
-        console.log("API DATA:", data);
 
         if (Array.isArray(data.dli_history)) {
           setReadings(data.dli_history);
@@ -87,7 +81,7 @@ export default function ReadingScreen() {
       <Text>Setup Device </Text>
       {deviceInfo && (
         <View style={styles.deviceBox}>
-          <Text style={styles.deviceText}>MAC: {deviceInfo.mac}</Text>
+          <Text style={styles.deviceText}> {deviceInfo.mac}</Text>
           <Text style={styles.deviceText}>SSID: {deviceInfo.ssid}</Text>
           <Text style={styles.deviceText}>Timezone: {deviceInfo.timezone}</Text>
 
