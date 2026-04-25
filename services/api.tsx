@@ -83,22 +83,23 @@ export const sendDeviceConfig = async (
   password: string,
   timezone: string,
 ) => {
-  const cleanSsid = ssid.trim();
-  const cleanPassword = password.trim();
-  const cleanTimezone = timezone.trim();
+  const cleanSsid = ssid;
+  const cleanPassword = password;
+  const cleanTimezone = timezone;
 
   if (!cleanSsid || !cleanPassword || !cleanTimezone) {
     throw new Error("SSID, password, and timezone are required.");
   }
 
-  const params = new URLSearchParams({
-    ssid: cleanSsid,
-    password: cleanPassword,
-    timezone: cleanTimezone,
-  });
-  const url = `${DEVICE_IP}/get?${params.toString()}`;
+  const encodeForDevice = (value: string) =>
+    encodeURIComponent(value).replace(/%20/g, "+");
+
+  const url = `${DEVICE_IP}/get?ssid=${encodeForDevice(cleanSsid)}&password=${encodeForDevice(cleanPassword)}&timezone=${encodeForDevice(cleanTimezone)}`;
   const response = await fetchWithTimeout(url);
   const text = await response.text();
+  console.log("Config request URL:", url);
+  console.log("Device raw response:", response);
+  console.log("Device response:", text);
 
   if (!response.ok) {
     throw new Error("Device rejected the configuration request.");
@@ -113,8 +114,8 @@ export const sendDeviceConfig = async (
   const storedConfig = extractStoredConfig(text);
 
   if (
-    storedConfig.ssid !== cleanSsid ||
-    storedConfig.timezone !== cleanTimezone
+    storedConfig.ssid?.trim() !== cleanSsid.trim() ||
+    storedConfig.timezone?.trim() !== cleanTimezone.trim()
   ) {
     throw new Error(
       "The Garden Sun device did not confirm the saved SSID and timezone.",

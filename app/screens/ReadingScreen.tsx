@@ -108,14 +108,37 @@ export default function ReadingScreen() {
               <Text
                 style={[styles.button, { backgroundColor: "#2196F3" }]}
                 onPress={async () => {
-                  // Call the restart endpoint
+                  console.log("🔴 Restart Device button pressed");
+                  console.log("Restart path:", deviceInfo.restartPath);
+
                   try {
-                    await fetch(`http://192.168.4.1${deviceInfo.restartPath}`, {
+                    const restartUrl = `http://192.168.4.1${deviceInfo.restartPath}`;
+                    console.log("📡 Sending restart request to:", restartUrl);
+
+                    // const response = await fetch(restartUrl, {
+                    //   method: "POST",
+                    // });
+
+                    const response = await fetch(restartUrl, {
                       method: "POST",
+                      headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                      },
+                      body: "restart=true",
                     });
+
+                    const text = await response.text();
+                    console.log("Restart response text:", text);
+
+                    // device ko upload + restart ke liye time do
+                    await new Promise((resolve) => setTimeout(resolve, 10000));
+                    console.log("✅ Restart response status:", response);
+                    console.log("Response text:", response.statusText);
+
                     alert("Device Restarted!");
+                    console.log("✨ Device restart successful");
                   } catch (err) {
-                    console.error("Restart failed:", err);
+                    console.log("❌ Restart failed with error:", err);
                     alert("Failed to restart device.");
                   }
                 }}

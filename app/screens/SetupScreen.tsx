@@ -19,6 +19,7 @@ export default function SetupScreen({ navigation }: any) {
     try {
       setIsSubmitting(true);
       const result = await sendDeviceConfig(ssid, password, timezone);
+      console.log("Configuration result:", result);
       Alert.alert(
         "Device Setup",
         `Setup complete. SSID "${result.storedConfig.ssid}" and timezone "${result.storedConfig.timezone}" are stored on the Garden Sun device.`,
@@ -26,9 +27,7 @@ export default function SetupScreen({ navigation }: any) {
       navigation.replace("Dashboard", { deviceData: result.responseText });
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Unable to configure device.";
+        error instanceof Error ? error.message : "Unable to configure device.";
 
       Alert.alert("Setup Failed", message);
     } finally {
