@@ -8,11 +8,11 @@ export const extractSetupInfo = (html: string) => {
     return cleanHtml.match(regex)?.[1]?.trim() || null;
   };
 
-  const mac = getValue("AP MAC Address");
   const ssid = getValue("WiFi SSID");
   const timezone = getValue("Timezone");
   const jsonPath = getValue("JSON File");
   const restartPath = cleanHtml.includes("/restart") ? "/restart" : null;
+  const mac = jsonPath?.replace("/", "").replace(".json", "").trim() || null;
 
   return { mac, ssid, timezone, jsonPath, restartPath };
 };

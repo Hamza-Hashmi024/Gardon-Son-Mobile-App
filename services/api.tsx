@@ -1,10 +1,16 @@
 export const DEVICE_IP = "http://192.168.4.1";
 
+const HOSTINGER_BASE_URL = "https://umerdesigns.com/dli/data";
+
 type StoredDeviceConfig = {
   ssid: string | null;
   timezone: string | null;
 };
 
+const extractMacAddress = (html: string) => {
+  const match = html.match(/AP MAC Address:<\/strong>\s*([^<]+)/i);
+  return match?.[1]?.replace(/:/g, "").trim().toUpperCase() || null;
+};
 const isAbortError = (error: unknown) =>
   error instanceof Error && error.name === "AbortError";
 
@@ -122,9 +128,15 @@ export const sendDeviceConfig = async (
     );
   }
 
+  const mac = extractMacAddress(text);
+
+  if (!mac) {
+    throw new Error("MAC address not found in device response");
+  }
   return {
     responseText: text,
     storedConfig,
+    mac,
   };
 };
 
@@ -154,4 +166,30 @@ export const getDeviceJson = async () => {
     }
     return {};
   }
+};
+
+export const getHostingerDeviceData = async (mac: string) => {
+  if (!mac) {
+    throw new Error("MAC is required");
+  }
+
+  const url = `${HOSTINGER_BASE_URL}/${mac}.json`;
+
+  for (let i = 0; i < 5; i++) {
+    try {
+      console.log("🌐 Fetching Hostinger:", url);
+
+      const response = await fetchWithTimeout(url);
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log("✅ Hostinger Data:", data);
+        return data;
+      }
+    } catch (err) {}
+
+    await new Promise((r) => setTimeout(r, 2000)); // wait 2s
+  }
+
+  throw new Error("Hostinger file not ready after retries");
 };
