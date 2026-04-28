@@ -423,7 +423,7 @@ type ReadingRouteParams = {
 
 type DeviceStatus = "idle" | "connected_wifi" | "has_data";
 
-export default function ReadingScreen() {
+export default function ReadingScreen({ navigation }: any) {
   const route = useRoute();
   const deviceData = (route.params as ReadingRouteParams | undefined)
     ?.deviceData;
@@ -559,18 +559,17 @@ export default function ReadingScreen() {
                 onPress={async () => {
                   try {
                     const restartUrl = `http://192.168.4.1${deviceInfo.restartPath}`;
-                    const response = await fetch(restartUrl, {
+                    await fetch(restartUrl, {
                       method: "POST",
                       headers: {
                         "Content-Type": "application/x-www-form-urlencoded",
                       },
                       body: "restart=true",
                     });
-                    await response.text();
-                    await new Promise((resolve) => setTimeout(resolve, 10000));
-                    alert("Device Restarted!");
-                  } catch (err) {
-                    alert("Failed to restart device.");
+                  } catch (_err) {
+                    // Device may close the connection on restart — that's fine
+                  } finally {
+                    navigation.replace("PostRestart", { deviceData });
                   }
                 }}
               >
