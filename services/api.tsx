@@ -11,9 +11,6 @@ const extractMacAddress = (html: string) => {
   const match = html.match(/AP MAC Address:<\/strong>\s*([^<]+)/i);
   return match?.[1]?.replace(/:/g, "").trim().toUpperCase() || null;
 };
-const isAbortError = (error: unknown) =>
-  error instanceof Error && error.name === "AbortError";
-
 const looksLikeSetupFailure = (responseText: string) => {
   const normalized = responseText.toLowerCase();
 
@@ -76,10 +73,7 @@ export const checkDeviceConnection = async () => {
   try {
     await fetchWithTimeout(`${DEVICE_IP}/`, undefined, 3000);
     return true;
-  } catch (error) {
-    if (!isAbortError(error)) {
-      console.error("checkDeviceConnection error:", error);
-    }
+  } catch {
     return false;
   }
 };
@@ -103,9 +97,6 @@ export const sendDeviceConfig = async (
   const url = `${DEVICE_IP}/get?ssid=${encodeForDevice(cleanSsid)}&password=${encodeForDevice(cleanPassword)}&timezone=${encodeForDevice(cleanTimezone)}`;
   const response = await fetchWithTimeout(url);
   const text = await response.text();
-  console.log("Config request URL:", url);
-  console.log("Device raw response:", response);
-  console.log("Device response:", text);
 
   if (!response.ok) {
     throw new Error("Device rejected the configuration request.");
@@ -143,27 +134,19 @@ export const sendDeviceConfig = async (
 export const getDeviceJson = async () => {
   try {
     const url = `${DEVICE_IP}/json`;
-    console.log("Fetching:", url);
 
     const response = await fetchWithTimeout(url);
 
     const contentType = response.headers.get("content-type");
-    console.log("Content-Type:", contentType);
 
     if (!contentType?.includes("application/json")) {
-      const text = await response.text();
-      console.log("⚠️ Not JSON response:", text);
       throw new Error("Invalid JSON response");
     }
 
     const data = await response.json();
-    console.log("✅ Parsed JSON:", data);
 
     return data;
-  } catch (error) {
-    if (!isAbortError(error)) {
-      console.error("getDeviceJson error:", error);
-    }
+  } catch {
     return {};
   }
 };
@@ -177,16 +160,13 @@ export const getHostingerDeviceData = async (mac: string) => {
 
   for (let i = 0; i < 5; i++) {
     try {
-      console.log("🌐 Fetching Hostinger:", url);
-
       const response = await fetchWithTimeout(url);
 
       if (response.ok) {
         const data = await response.json();
-        console.log("✅ Hostinger Data:", data);
         return data;
       }
-    } catch (err) {}
+    } catch {}
 
     await new Promise((r) => setTimeout(r, 2000)); // wait 2s
   }

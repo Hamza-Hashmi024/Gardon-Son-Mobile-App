@@ -76,9 +76,7 @@ export default function LiveReadingsScreen({ navigation }: any) {
         setReadings([]);
         setStatus("idle");
       }
-    } catch (error) {
-      console.error("Fetch error:", error);
-    }
+    } catch {}
   };
 
   useEffect(() => {

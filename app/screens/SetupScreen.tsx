@@ -19,7 +19,6 @@ export default function SetupScreen({ navigation }: any) {
     try {
       setIsSubmitting(true);
       const result = await sendDeviceConfig(ssid, password, timezone);
-      console.log("Configuration result:", result);
       Alert.alert(
         "Device Setup",
         `Setup complete. SSID "${result.storedConfig.ssid}" and timezone "${result.storedConfig.timezone}" are stored on the Garden Sun device.`,

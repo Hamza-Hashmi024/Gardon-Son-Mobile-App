@@ -49,8 +49,7 @@ export default function ConnectionScreen({ navigation }: any) {
       }
 
       await Linking.openSettings();
-    } catch (error) {
-      console.error("❌ openWifiSettings error:", error);
+    } catch {
       setErrorMessage(
         "Unable to open Wi-Fi settings automatically. Please open your phone settings and connect to the Garden Sun Wi-Fi.",
       );

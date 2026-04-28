@@ -47,14 +47,11 @@
 //         if (Array.isArray(data?.dli_history)) {
 //           setReadings(data.dli_history);
 //         } else if (data?.wifi_status) {
-//           console.log("Device connected:", data.wifi_status);
 //           setReadings([]);
 //         } else {
 //           setReadings([]);
 //         }
-//       } catch (error) {
-//         console.error("Fetch error:", error);
-//       }
+//       } catch {}
 //     };
 
 //     fetchData();
@@ -77,9 +74,7 @@
 //       } else if (data?.wifi_status) {
 //         setReadings([]); // initial state
 //       }
-//     } catch (error) {
-//       console.error("Refresh error:", error);
-//     }
+//     } catch {}
 
 //     setRefreshing(false);
 //   };
@@ -116,7 +111,6 @@
 //                 onPress={() => {
 //                   // Open JSON file in browser (or WebView)
 //                   const url = `http://192.168.4.1${deviceInfo.jsonPath}`;
-//                   console.log("Open JSON:", url);
 //                   // use Linking API to open in default browser
 //                   import("react-native").then(({ Linking }) =>
 //                     Linking.openURL(url),
@@ -131,12 +125,8 @@
 //               <Text
 //                 style={[styles.button, { backgroundColor: "#2196F3" }]}
 //                 onPress={async () => {
-//                   console.log("🔴 Restart Device button pressed");
-//                   console.log("Restart path:", deviceInfo.restartPath);
-
 //                   try {
 //                     const restartUrl = `http://192.168.4.1${deviceInfo.restartPath}`;
-//                     console.log("📡 Sending restart request to:", restartUrl);
 
 //                     // const response = await fetch(restartUrl, {
 //                     //   method: "POST",
@@ -151,17 +141,12 @@
 //                     });
 
 //                     const text = await response.text();
-//                     console.log("Restart response text:", text);
 
 //                     // device ko upload + restart ke liye time do
 //                     await new Promise((resolve) => setTimeout(resolve, 10000));
-//                     console.log("✅ Restart response status:", response);
-//                     console.log("Response text:", response.statusText);
 
 //                     alert("Device Restarted!");
-//                     console.log("✨ Device restart successful");
-//                   } catch (err) {
-//                     console.log("❌ Restart failed with error:", err);
+//                   } catch {
 //                     alert("Failed to restart device.");
 //                   }
 //                 }}
@@ -468,9 +453,7 @@ export default function ReadingScreen({ navigation }: any) {
         setReadings([]);
         setStatus("idle");
       }
-    } catch (error) {
-      console.error("Fetch error:", error);
-    }
+    } catch {}
   };
 
   useEffect(() => {
