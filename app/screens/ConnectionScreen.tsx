@@ -52,10 +52,19 @@ export default function ConnectionScreen({ navigation }: any) {
         return;
       }
 
+      if (Platform.OS === "ios") {
+        try {
+          await Linking.openURL("App-Prefs:root=WIFI");
+        } catch {
+          await Linking.openSettings();
+        }
+        return;
+      }
+
       await Linking.openSettings();
     } catch {
       setErrorMessage(
-        "Unable to open Wi-Fi settings automatically. Please open your phone settings and connect to the Garden Sun Wi-Fi.",
+        "Unable to open Wi-Fi settings automatically. Please open Settings, go to Wi-Fi, and connect to the Garden Sun network.",
       );
     }
   };
