@@ -1,8 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
-import { AppState, Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import * as Linking from "expo-linking";
-
+import { AppButton } from "@/components/ui/AppButton";
+import { AppCard } from "@/components/ui/AppCard";
+import { ScreenBackground } from "@/components/ui/ScreenBackground";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { colors, spacing, typography } from "@/constants/design";
 import { checkDeviceConnection } from "@/services/api";
+import { useCallback, useEffect, useState } from "react";
+import { AppState, Platform, StyleSheet, Text, View } from "react-native";
+import * as Linking from "expo-linking";
 
 export default function ConnectionScreen({ navigation }: any) {
   const [isChecking, setIsChecking] = useState(true);
@@ -57,173 +61,71 @@ export default function ConnectionScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.accentTopRight} />
-      <View style={styles.accentBottomLeft} />
+    <ScreenBackground>
+      <View style={styles.container}>
+        <AppCard>
+          <ScreenHeader
+            eyebrow="DEVICE CONNECTION"
+            title="Connect to Garden Sun"
+            icon="wifi"
+          />
 
-      <View style={styles.card}>
-        <View style={styles.headerRow}>
-          <View style={styles.iconBox}>
-            <Text style={styles.iconText}>⌁</Text>
-          </View>
-          <View>
-            <Text style={styles.eyebrow}>DEVICE CONNECTION</Text>
-            <Text style={styles.title}>Connect to Garden Sun</Text>
-          </View>
-        </View>
+          <View style={styles.divider} />
 
-        <View style={styles.divider} />
-
-        <Text style={styles.message}>
-          {isChecking
-            ? "Checking connection with your Garden Sun device..."
-            : errorMessage}
-        </Text>
-
-        <TouchableOpacity
-          style={styles.button}
-          onPress={openWifiSettings}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.buttonText}>Open Wi-Fi Settings</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.secondaryButton}
-          onPress={verifyConnection}
-          activeOpacity={0.85}
-        >
-          <Text style={styles.secondaryButtonText}>
-            {isChecking ? "Checking..." : "Retry Connection"}
+          <Text style={styles.message}>
+            {isChecking
+              ? "Checking connection with your Garden Sun device..."
+              : errorMessage}
           </Text>
-        </TouchableOpacity>
 
-        <Text style={styles.footerNote}>
-          After connecting to the Garden Sun Wi-Fi, come back to the app and it
-          will continue automatically.
-        </Text>
+          <AppButton
+            title="Open Wi-Fi Settings"
+            icon="settings"
+            onPress={openWifiSettings}
+            style={styles.button}
+          />
+
+          <AppButton
+            title={isChecking ? "Checking..." : "Retry Connection"}
+            icon="refresh-cw"
+            onPress={verifyConnection}
+            variant="secondary"
+          />
+
+          <Text style={styles.footerNote}>
+            After connecting to the Garden Sun Wi-Fi, come back to the app and it
+            will continue automatically.
+          </Text>
+        </AppCard>
       </View>
-    </View>
+    </ScreenBackground>
   );
 }
-
-const NAVY = "#0B1F3A";
-const TEAL = "#00C9A7";
-const CARD_BG = "#F0F4FA";
-const BORDER = "#D5DDE8";
-const LABEL_COLOR = "#5A7290";
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: NAVY,
     justifyContent: "center",
-    padding: 24,
-  },
-  accentTopRight: {
-    position: "absolute",
-    top: -60,
-    right: -60,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: TEAL,
-    opacity: 0.12,
-  },
-  accentBottomLeft: {
-    position: "absolute",
-    bottom: -80,
-    left: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: "#3B82F6",
-    opacity: 0.1,
-  },
-  card: {
-    backgroundColor: CARD_BG,
-    borderRadius: 24,
-    padding: 28,
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
-  },
-  headerRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    marginBottom: 20,
-  },
-  iconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: NAVY,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconText: {
-    fontSize: 22,
-    color: TEAL,
-  },
-  eyebrow: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2,
-    color: TEAL,
-    marginBottom: 2,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: NAVY,
-    letterSpacing: -0.3,
+    padding: spacing.screen,
   },
   divider: {
     height: 1,
-    backgroundColor: BORDER,
-    marginBottom: 22,
+    backgroundColor: colors.border,
+    marginBottom: spacing.xxl,
   },
   message: {
-    fontSize: 15,
-    lineHeight: 22,
-    color: NAVY,
-    marginBottom: 20,
+    ...typography.subtitle,
+    color: colors.text,
+    marginBottom: spacing.xl,
   },
   button: {
-    backgroundColor: NAVY,
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: TEAL,
-    marginBottom: 12,
-  },
-  buttonText: {
-    color: TEAL,
-    fontSize: 15,
-    fontWeight: "800",
-    letterSpacing: 0.5,
-  },
-  secondaryButton: {
-    paddingVertical: 14,
-    borderRadius: 14,
-    alignItems: "center",
-    borderWidth: 1.5,
-    borderColor: BORDER,
-    backgroundColor: "#FFFFFF",
-  },
-  secondaryButtonText: {
-    color: NAVY,
-    fontSize: 15,
-    fontWeight: "700",
+    marginBottom: spacing.md,
   },
   footerNote: {
-    marginTop: 16,
+    marginTop: spacing.lg,
     textAlign: "center",
+    ...typography.body,
     fontSize: 12,
-    color: LABEL_COLOR,
+    color: colors.textMuted,
   },
 });

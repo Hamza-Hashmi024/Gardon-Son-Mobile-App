@@ -1,5 +1,10 @@
+import { AppCard } from "@/components/ui/AppCard";
+import { ScreenBackground } from "@/components/ui/ScreenBackground";
+import { ScreenHeader } from "@/components/ui/ScreenHeader";
+import { colors, radius, spacing, typography } from "@/constants/design";
 import { getHostingerDeviceData } from "@/services/api";
 import { extractSetupInfo } from "@/services/extracter";
+import { Feather } from "@expo/vector-icons";
 import { useRoute } from "@react-navigation/native";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -30,12 +35,9 @@ type LiveReadingsRouteParams = {
   deviceData?: string;
 };
 
-// Stage 1: Hostinger file not found yet      → "Connecting to Wi-Fi"
-// Stage 2: file exists, wifi_status present  → "Waiting for first DLI"
-// Stage 3: dli_history has data              → show readings
 type DeviceStatus = "connecting_wifi" | "waiting_dli" | "has_data";
 
-export default function LiveReadingsScreen({ navigation }: any) {
+export default function LiveReadingsScreen() {
   const route = useRoute();
   const deviceData = (route.params as LiveReadingsRouteParams | undefined)
     ?.deviceData;
@@ -46,7 +48,6 @@ export default function LiveReadingsScreen({ navigation }: any) {
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
-  // Pulsing dot animation
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
   useEffect(() => {
     Animated.loop(
@@ -81,7 +82,6 @@ export default function LiveReadingsScreen({ navigation }: any) {
       const data = await getHostingerDeviceData(deviceInfo.mac);
 
       if (Array.isArray(data?.dli_history) && data.dli_history.length > 0) {
-        // Stage 3 — has readings
         setReadings(data.dli_history);
         setStatus("has_data");
         const now = new Date();
@@ -93,13 +93,10 @@ export default function LiveReadingsScreen({ navigation }: any) {
           }),
         );
       } else if (data?.wifi_status) {
-        // Stage 2 — file exists, wifi connected, no DLI yet
         setStatus("waiting_dli");
         setReadings([]);
       }
-      // if neither, stay on connecting_wifi (stage 1)
     } catch {
-      // File not on Hostinger yet — stay on stage 1
       setStatus("connecting_wifi");
     }
   };
@@ -119,16 +116,15 @@ export default function LiveReadingsScreen({ navigation }: any) {
 
   const formatValue = (val: number): string => {
     if (val === 0) return "0";
-    if (val < 0.01) return val.toFixed(5);
-    if (val < 1) return val.toFixed(3);
+    if (val < 0.01) return val.toFixed(5).replace(/\.?0+$/, "");
     return val.toString();
   };
 
   const getValueColor = (val: number): string => {
-    if (val === 0) return LABEL_COLOR;
-    if (val >= 20) return "#00C9A7";
-    if (val >= 5) return "#3B82F6";
-    return "#F59E0B";
+    if (val === 0) return colors.textMuted;
+    if (val >= 20) return colors.secondary;
+    if (val >= 5) return colors.accent;
+    return colors.warning;
   };
 
   const renderStatusCard = () => {
@@ -138,22 +134,19 @@ export default function LiveReadingsScreen({ navigation }: any) {
       {
         key: "connecting_wifi",
         label: "Connecting to Wi-Fi",
-        sub: "Device is joining your network…",
-        done: status === "waiting_dli",
+        sub: "Device is joining your network...",
       },
       {
         key: "waiting_dli",
         label: "Waiting for First DLI",
-        sub: "Syncing light readings to server…",
-        done: false,
+        sub: "Syncing light readings to server...",
       },
     ];
 
     const activeIndex = status === "connecting_wifi" ? 0 : 1;
 
     return (
-      <View style={styles.statusCard}>
-        {/* Animated dot */}
+      <AppCard tone="dark" style={styles.statusCard}>
         <Animated.View style={[styles.statusDot, { opacity: pulseAnim }]} />
 
         <View style={styles.statusContent}>
@@ -165,7 +158,6 @@ export default function LiveReadingsScreen({ navigation }: any) {
 
             return (
               <View key={step.key} style={styles.stepRow}>
-                {/* Step indicator */}
                 <View
                   style={[
                     styles.stepCircle,
@@ -173,19 +165,21 @@ export default function LiveReadingsScreen({ navigation }: any) {
                     isActive && styles.stepCircleActive,
                   ]}
                 >
-                  <Text
-                    style={[
-                      styles.stepCircleText,
-                      isDone && styles.stepCircleTextDone,
-                      isActive && styles.stepCircleTextActive,
-                    ]}
-                  >
-                    {isDone ? "✓" : `${i + 1}`}
-                  </Text>
+                  {isDone ? (
+                    <Feather name="check" size={14} color={colors.primary} />
+                  ) : (
+                    <Text
+                      style={[
+                        styles.stepCircleText,
+                        isActive && styles.stepCircleTextActive,
+                      ]}
+                    >
+                      {i + 1}
+                    </Text>
+                  )}
                 </View>
 
-                {/* Step text */}
-                <View style={{ flex: 1 }}>
+                <View style={styles.stepCopy}>
                   <Text
                     style={[
                       styles.stepLabel,
@@ -195,323 +189,269 @@ export default function LiveReadingsScreen({ navigation }: any) {
                   >
                     {step.label}
                   </Text>
-                  {isActive && (
-                    <Text style={styles.stepSub}>{step.sub}</Text>
-                  )}
+                  {isActive && <Text style={styles.stepSub}>{step.sub}</Text>}
                 </View>
               </View>
             );
           })}
         </View>
-      </View>
+      </AppCard>
     );
   };
 
   return (
-    <View style={styles.container}>
-      <View style={styles.accentTopRight} />
-      <View style={styles.accentBottomLeft} />
-
-      {/* Header */}
-      <View style={styles.header}>
-        <View style={styles.iconBox}>
-          <Text style={styles.iconText}>☀</Text>
-        </View>
-        <View style={{ flex: 1 }}>
-          <Text style={styles.eyebrow}>LIVE MONITORING</Text>
-          <Text style={styles.title}>DLI Readings</Text>
-        </View>
-        {lastUpdated && (
-          <View style={styles.lastUpdatedBadge}>
-            <Text style={styles.lastUpdatedText}>↻ {lastUpdated}</Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.divider} />
-
-      {/* Status stepper (hidden once we have data) */}
-      {renderStatusCard()}
-
-      {/* DLI List */}
-      {status === "has_data" && (
-        <FlatList
-          data={readings}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={TEAL}
-              colors={[TEAL]}
-            />
-          }
-          keyExtractor={(_, index) => index.toString()}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <Text style={styles.listHeader}>{readings.length} readings</Text>
-          }
-          renderItem={({ item, index }) => (
-            <View style={styles.card}>
-              <View style={styles.indexBadge}>
-                <Text style={styles.indexText}>#{index + 1}</Text>
+    <ScreenBackground>
+      <View style={styles.container}>
+        <ScreenHeader
+          eyebrow="LIVE MONITORING"
+          title="DLI Readings"
+          icon="sun"
+          inverted
+          trailing={
+            lastUpdated ? (
+              <View style={styles.lastUpdatedBadge}>
+                <Feather name="refresh-cw" size={12} color={colors.secondary} />
+                <Text style={styles.lastUpdatedText}>{lastUpdated}</Text>
               </View>
+            ) : null
+          }
+        />
 
-              <View style={styles.cardBody}>
-                <View style={styles.valueRow}>
-                  <Text
-                    style={[
-                      styles.valueNumber,
-                      { color: getValueColor(item.value) },
-                    ]}
-                  >
-                    {formatValue(item.value)}
-                  </Text>
-                  <Text style={styles.valueUnit}>mol/m²/d</Text>
+        <View style={styles.divider} />
+
+        {renderStatusCard()}
+
+        {status === "has_data" && (
+          <FlatList
+            data={readings}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor={colors.secondary}
+                colors={[colors.secondary]}
+              />
+            }
+            keyExtractor={(_, index) => index.toString()}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            ListHeaderComponent={
+              <Text style={styles.listHeader}>{readings.length} readings</Text>
+            }
+            renderItem={({ item, index }) => (
+              <AppCard style={styles.card}>
+                <View style={styles.indexBadge}>
+                  <Text style={styles.indexText}>#{index + 1}</Text>
                 </View>
 
-                {(item.time || item.date) && (
-                  <View style={styles.metaRow}>
-                    {item.time && (
-                      <View style={styles.metaChip}>
-                        <Text style={styles.metaLabel}>TIME</Text>
-                        <Text style={styles.metaValue}>{item.time}</Text>
-                      </View>
-                    )}
-                    {item.date && (
-                      <View style={styles.metaChip}>
-                        <Text style={styles.metaLabel}>DATE</Text>
-                        <Text style={styles.metaValue}>{item.date}</Text>
-                      </View>
-                    )}
+                <View style={styles.cardBody}>
+                  <View style={styles.valueRow}>
+                    <Text
+                      style={[
+                        styles.valueNumber,
+                        { color: getValueColor(item.value) },
+                      ]}
+                    >
+                      {formatValue(item.value)}
+                    </Text>
+                    <Text style={styles.valueUnit}></Text>
                   </View>
-                )}
-              </View>
-            </View>
-          )}
-        />
-      )}
-    </View>
+
+                  {(item.time || item.date) && (
+                    <View style={styles.metaRow}>
+                      {item.time && (
+                        <View style={styles.metaChip}>
+                          <Text style={styles.metaLabel}>TIME</Text>
+                          <Text style={styles.metaValue}>{item.time}</Text>
+                        </View>
+                      )}
+                      {item.date && (
+                        <View style={styles.metaChip}>
+                          <Text style={styles.metaLabel}>DATE</Text>
+                          <Text style={styles.metaValue}>{item.date}</Text>
+                        </View>
+                      )}
+                    </View>
+                  )}
+                </View>
+              </AppCard>
+            )}
+          />
+        )}
+      </View>
+    </ScreenBackground>
   );
 }
-
-const NAVY = "#0B1F3A";
-const TEAL = "#00C9A7";
-const CARD_BG = "#F0F4FA";
-const LABEL_COLOR = "#5A7290";
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: NAVY,
     paddingTop: 56,
-    paddingHorizontal: 20,
-  },
-  accentTopRight: {
-    position: "absolute",
-    top: -60,
-    right: -60,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: TEAL,
-    opacity: 0.12,
-  },
-  accentBottomLeft: {
-    position: "absolute",
-    bottom: -80,
-    left: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: "#3B82F6",
-    opacity: 0.1,
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-    marginBottom: 20,
-  },
-  iconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: "#112240",
-    borderWidth: 1.5,
-    borderColor: TEAL,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  iconText: { fontSize: 22, color: TEAL },
-  eyebrow: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2,
-    color: TEAL,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#FFFFFF",
-  },
-  lastUpdatedBadge: {
-    backgroundColor: "#112240",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderWidth: 0.5,
-    borderColor: TEAL,
-  },
-  lastUpdatedText: {
-    fontSize: 11,
-    color: TEAL,
-    fontWeight: "600",
+    paddingHorizontal: spacing.xl,
   },
   divider: {
     height: 1,
-    backgroundColor: "#1E3A5F",
-    marginBottom: 14,
+    backgroundColor: colors.borderDark,
+    marginBottom: spacing.lg,
   },
-
-  // Status stepper card
-  statusCard: {
-    backgroundColor: "#112240",
-    borderRadius: 16,
-    padding: 20,
-    flexDirection: "row",
-    gap: 14,
-    alignItems: "flex-start",
+  lastUpdatedBadge: {
+    marginLeft: "auto",
+    backgroundColor: colors.surfaceDark,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
     borderWidth: 1,
-    borderColor: "#1E3A5F",
+    borderColor: colors.secondary,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: spacing.xs,
+  },
+  lastUpdatedText: {
+    fontSize: 11,
+    color: colors.secondary,
+    fontWeight: "700",
+  },
+  statusCard: {
+    borderRadius: radius.lg,
+    padding: spacing.xl,
+    flexDirection: "row",
+    gap: spacing.md,
+    alignItems: "flex-start",
   },
   statusDot: {
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: TEAL,
-    marginTop: 4,
+    backgroundColor: colors.secondary,
+    marginTop: spacing.xs,
   },
   statusContent: {
     flex: 1,
-    gap: 16,
+    gap: spacing.lg,
   },
   statusTitle: {
-    fontSize: 12,
-    fontWeight: "800",
-    color: "#FFFFFF",
-    letterSpacing: 1,
+    ...typography.label,
+    color: colors.textInverse,
     textTransform: "uppercase",
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   stepRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 12,
+    gap: spacing.md,
   },
   stepCircle: {
     width: 26,
     height: 26,
     borderRadius: 13,
-    backgroundColor: "#0B1F3A",
+    backgroundColor: colors.primary,
     borderWidth: 1.5,
-    borderColor: "#1E3A5F",
+    borderColor: colors.borderDark,
     alignItems: "center",
     justifyContent: "center",
   },
   stepCircleActive: {
-    borderColor: TEAL,
-    backgroundColor: "#0B1F3A",
+    borderColor: colors.secondary,
   },
   stepCircleDone: {
-    borderColor: TEAL,
-    backgroundColor: TEAL,
+    borderColor: colors.secondary,
+    backgroundColor: colors.secondary,
   },
   stepCircleText: {
     fontSize: 11,
     fontWeight: "700",
-    color: LABEL_COLOR,
+    color: colors.textMuted,
   },
   stepCircleTextActive: {
-    color: TEAL,
+    color: colors.secondary,
   },
-  stepCircleTextDone: {
-    color: NAVY,
+  stepCopy: {
+    flex: 1,
   },
   stepLabel: {
     fontSize: 13,
     fontWeight: "600",
-    color: LABEL_COLOR,
+    color: colors.textMuted,
   },
   stepLabelActive: {
-    color: "#FFFFFF",
+    color: colors.textInverse,
     fontWeight: "700",
   },
   stepLabelDone: {
-    color: TEAL,
+    color: colors.secondary,
   },
   stepSub: {
     fontSize: 11,
-    color: LABEL_COLOR,
+    color: colors.textMuted,
     marginTop: 2,
   },
-
-  // List
   listHeader: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: LABEL_COLOR,
-    letterSpacing: 1.5,
-    marginBottom: 10,
+    ...typography.label,
+    color: colors.textMuted,
+    marginBottom: spacing.md,
     textTransform: "uppercase",
   },
   listContent: {
     paddingBottom: 40,
-    gap: 10,
+    gap: spacing.md,
   },
   card: {
-    backgroundColor: CARD_BG,
-    borderRadius: 16,
-    padding: 16,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
     flexDirection: "row",
-    gap: 14,
-    elevation: 3,
+    gap: spacing.md,
   },
   indexBadge: {
     width: 36,
     height: 36,
     borderRadius: 10,
-    backgroundColor: NAVY,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  indexText: { fontSize: 11, fontWeight: "700", color: TEAL },
-  cardBody: { flex: 1, gap: 8 },
+  indexText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: colors.secondary,
+  },
+  cardBody: {
+    flex: 1,
+    gap: spacing.sm,
+  },
   valueRow: {
     flexDirection: "row",
     alignItems: "baseline",
     gap: 6,
   },
-  valueNumber: { fontSize: 28, fontWeight: "800" },
-  valueUnit: { fontSize: 12, color: LABEL_COLOR },
-  metaRow: { flexDirection: "row", gap: 8 },
+  valueNumber: {
+    fontSize: 28,
+    fontWeight: "800",
+  },
+  valueUnit: {
+    fontSize: 12,
+    color: colors.textMuted,
+  },
+  metaRow: {
+    flexDirection: "row",
+    gap: spacing.sm,
+  },
   metaChip: {
-    backgroundColor: "#E2EAF4",
-    borderRadius: 8,
-    paddingHorizontal: 10,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: radius.sm,
+    paddingHorizontal: spacing.md,
     paddingVertical: 6,
     flex: 1,
   },
   metaLabel: {
     fontSize: 9,
     fontWeight: "700",
-    color: LABEL_COLOR,
+    color: colors.textMuted,
     letterSpacing: 0.8,
   },
   metaValue: {
     fontSize: 13,
     fontWeight: "600",
-    color: NAVY,
+    color: colors.text,
     marginTop: 1,
   },
 });

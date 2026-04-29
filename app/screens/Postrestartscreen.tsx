@@ -1,3 +1,7 @@
+import { AppCard } from "@/components/ui/AppCard";
+import { ScreenBackground } from "@/components/ui/ScreenBackground";
+import { colors, spacing, typography } from "@/constants/design";
+import { Feather } from "@expo/vector-icons";
 import { useEffect, useRef, useState } from "react";
 import { Animated, Easing, StyleSheet, Text, View } from "react-native";
 import { useRoute } from "@react-navigation/native";
@@ -29,7 +33,7 @@ export default function PostRestartScreen({ navigation }: any) {
     ).start();
   }, []);
 
-  // Countdown tick — navigate when it hits 0
+  // Countdown tick, then navigate when it hits 0.
   useEffect(() => {
     if (countdown <= 0) {
       navigation.replace("LiveReadings", { deviceData });
@@ -45,18 +49,15 @@ export default function PostRestartScreen({ navigation }: any) {
   });
 
   return (
-    <View style={styles.container}>
-      <View style={styles.accentTopRight} />
-      <View style={styles.accentBottomLeft} />
-
-      <View style={styles.card}>
-        {/* Spinner */}
+    <ScreenBackground>
+      <View style={styles.container}>
+        <AppCard style={styles.card}>
         <View style={styles.spinnerWrap}>
           <Animated.View
             style={[styles.spinnerRing, { transform: [{ rotate: spin }] }]}
           />
           <View style={styles.iconCircle}>
-            <Text style={styles.iconEmoji}>⟳</Text>
+            <Feather name="refresh-cw" size={28} color={colors.secondary} />
           </View>
         </View>
 
@@ -66,68 +67,34 @@ export default function PostRestartScreen({ navigation }: any) {
         <View style={styles.divider} />
 
         <Text style={styles.message}>
-          The device is restarting. Please wait…
+          The device is restarting. Please wait...
         </Text>
 
         <View style={styles.countdownBox}>
           <Text style={styles.countdownNumber}>{countdown}</Text>
           <Text style={styles.countdownLabel}>seconds remaining</Text>
         </View>
+        </AppCard>
       </View>
-    </View>
+    </ScreenBackground>
   );
 }
-
-const NAVY = "#0B1F3A";
-const TEAL = "#00C9A7";
-const CARD_BG = "#F0F4FA";
-const BORDER = "#D5DDE8";
-const LABEL_COLOR = "#5A7290";
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: NAVY,
     justifyContent: "center",
-    padding: 28,
-  },
-  accentTopRight: {
-    position: "absolute",
-    top: -60,
-    right: -60,
-    width: 200,
-    height: 200,
-    borderRadius: 100,
-    backgroundColor: TEAL,
-    opacity: 0.12,
-  },
-  accentBottomLeft: {
-    position: "absolute",
-    bottom: -80,
-    left: -80,
-    width: 260,
-    height: 260,
-    borderRadius: 130,
-    backgroundColor: "#3B82F6",
-    opacity: 0.1,
+    padding: spacing.screen,
   },
   card: {
-    backgroundColor: CARD_BG,
-    borderRadius: 24,
-    padding: 28,
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 10,
   },
   spinnerWrap: {
     alignItems: "center",
     justifyContent: "center",
     width: 80,
     height: 80,
-    marginBottom: 22,
+    marginBottom: spacing.xl,
   },
   spinnerRing: {
     position: "absolute",
@@ -135,70 +102,58 @@ const styles = StyleSheet.create({
     height: 80,
     borderRadius: 40,
     borderWidth: 3,
-    borderColor: TEAL,
+    borderColor: colors.secondary,
     borderTopColor: "transparent",
   },
   iconCircle: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: NAVY,
+    backgroundColor: colors.primary,
     alignItems: "center",
     justifyContent: "center",
   },
-  iconEmoji: {
-    fontSize: 28,
-    color: TEAL,
-    fontWeight: "800",
-  },
   eyebrow: {
-    fontSize: 10,
-    fontWeight: "700",
-    letterSpacing: 2,
-    color: TEAL,
-    marginBottom: 4,
+    ...typography.eyebrow,
+    color: colors.secondary,
+    marginBottom: spacing.xs,
   },
   title: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: NAVY,
-    letterSpacing: -0.3,
-    marginBottom: 16,
+    ...typography.title,
+    color: colors.text,
+    marginBottom: spacing.lg,
     textAlign: "center",
   },
   divider: {
     height: 1,
-    backgroundColor: BORDER,
+    backgroundColor: colors.border,
     width: "100%",
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   message: {
-    fontSize: 14,
-    color: LABEL_COLOR,
+    ...typography.body,
+    color: colors.textMuted,
     textAlign: "center",
-    lineHeight: 21,
-    marginBottom: 20,
+    marginBottom: spacing.xl,
   },
   countdownBox: {
     alignItems: "center",
-    backgroundColor: NAVY,
+    backgroundColor: colors.primary,
     borderRadius: 16,
-    paddingVertical: 18,
+    paddingVertical: spacing.lg,
     paddingHorizontal: 36,
     borderWidth: 1.5,
-    borderColor: TEAL,
+    borderColor: colors.secondary,
   },
   countdownNumber: {
     fontSize: 48,
     fontWeight: "900",
-    color: TEAL,
+    color: colors.secondary,
     lineHeight: 54,
   },
   countdownLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: LABEL_COLOR,
-    letterSpacing: 1.2,
+    ...typography.label,
+    color: colors.textMuted,
     marginTop: 2,
   },
 });
