@@ -1,13 +1,14 @@
 import { getHostingerDeviceData } from "@/services/api";
 import { extractSetupInfo } from "@/services/extracter";
 import { useRoute } from "@react-navigation/native";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
+  Animated,
+  Easing,
   FlatList,
   RefreshControl,
   StyleSheet,
   Text,
-  TouchableOpacity,
   View,
 } from "react-native";
 
@@ -29,7 +30,10 @@ type LiveReadingsRouteParams = {
   deviceData?: string;
 };
 
-type DeviceStatus = "idle" | "connected_wifi" | "has_data";
+// Stage 1: Hostinger file not found yet      → "Connecting to Wi-Fi"
+// Stage 2: file exists, wifi_status present  → "Waiting for first DLI"
+// Stage 3: dli_history has data              → show readings
+type DeviceStatus = "connecting_wifi" | "waiting_dli" | "has_data";
 
 export default function LiveReadingsScreen({ navigation }: any) {
   const route = useRoute();
@@ -38,10 +42,30 @@ export default function LiveReadingsScreen({ navigation }: any) {
 
   const [readings, setReadings] = useState<DliReading[]>([]);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
-  const [status, setStatus] = useState<DeviceStatus>("idle");
-  const [wifiStatus, setWifiStatus] = useState<string | null>(null);
+  const [status, setStatus] = useState<DeviceStatus>("connecting_wifi");
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
+  // Pulsing dot animation
+  const pulseAnim = useRef(new Animated.Value(0.4)).current;
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulseAnim, {
+          toValue: 1,
+          duration: 800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulseAnim, {
+          toValue: 0.4,
+          duration: 800,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    ).start();
+  }, []);
 
   useEffect(() => {
     if (deviceData) {
@@ -57,9 +81,9 @@ export default function LiveReadingsScreen({ navigation }: any) {
       const data = await getHostingerDeviceData(deviceInfo.mac);
 
       if (Array.isArray(data?.dli_history) && data.dli_history.length > 0) {
+        // Stage 3 — has readings
         setReadings(data.dli_history);
         setStatus("has_data");
-        setWifiStatus(null);
         const now = new Date();
         setLastUpdated(
           now.toLocaleTimeString([], {
@@ -69,14 +93,15 @@ export default function LiveReadingsScreen({ navigation }: any) {
           }),
         );
       } else if (data?.wifi_status) {
-        setWifiStatus(data.wifi_status);
-        setStatus("connected_wifi");
+        // Stage 2 — file exists, wifi connected, no DLI yet
+        setStatus("waiting_dli");
         setReadings([]);
-      } else {
-        setReadings([]);
-        setStatus("idle");
       }
-    } catch {}
+      // if neither, stay on connecting_wifi (stage 1)
+    } catch {
+      // File not on Hostinger yet — stay on stage 1
+      setStatus("connecting_wifi");
+    }
   };
 
   useEffect(() => {
@@ -106,22 +131,80 @@ export default function LiveReadingsScreen({ navigation }: any) {
     return "#F59E0B";
   };
 
-  const handleRestart = async () => {
-    if (!deviceInfo?.restartPath) return;
+  const renderStatusCard = () => {
+    if (status === "has_data") return null;
 
-    try {
-      const restartUrl = `http://192.168.4.1${deviceInfo.restartPath}`;
-      await fetch(restartUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: "restart=true",
-      });
-      // Navigate to PostRestart which handles the waiting + reconnect
-      navigation.replace("PostRestart", { deviceData });
-    } catch (err) {
-      // Still navigate — device may have restarted before response
-      navigation.replace("PostRestart", { deviceData });
-    }
+    const steps = [
+      {
+        key: "connecting_wifi",
+        label: "Connecting to Wi-Fi",
+        sub: "Device is joining your network…",
+        done: status === "waiting_dli",
+      },
+      {
+        key: "waiting_dli",
+        label: "Waiting for First DLI",
+        sub: "Syncing light readings to server…",
+        done: false,
+      },
+    ];
+
+    const activeIndex = status === "connecting_wifi" ? 0 : 1;
+
+    return (
+      <View style={styles.statusCard}>
+        {/* Animated dot */}
+        <Animated.View style={[styles.statusDot, { opacity: pulseAnim }]} />
+
+        <View style={styles.statusContent}>
+          <Text style={styles.statusTitle}>Device Starting Up</Text>
+
+          {steps.map((step, i) => {
+            const isActive = i === activeIndex;
+            const isDone = i < activeIndex;
+
+            return (
+              <View key={step.key} style={styles.stepRow}>
+                {/* Step indicator */}
+                <View
+                  style={[
+                    styles.stepCircle,
+                    isDone && styles.stepCircleDone,
+                    isActive && styles.stepCircleActive,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.stepCircleText,
+                      isDone && styles.stepCircleTextDone,
+                      isActive && styles.stepCircleTextActive,
+                    ]}
+                  >
+                    {isDone ? "✓" : `${i + 1}`}
+                  </Text>
+                </View>
+
+                {/* Step text */}
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={[
+                      styles.stepLabel,
+                      isActive && styles.stepLabelActive,
+                      isDone && styles.stepLabelDone,
+                    ]}
+                  >
+                    {step.label}
+                  </Text>
+                  {isActive && (
+                    <Text style={styles.stepSub}>{step.sub}</Text>
+                  )}
+                </View>
+              </View>
+            );
+          })}
+        </View>
+      </View>
+    );
   };
 
   return (
@@ -147,143 +230,67 @@ export default function LiveReadingsScreen({ navigation }: any) {
 
       <View style={styles.divider} />
 
-      {/* Device Info Bar */}
-      {deviceInfo && (
-        <View style={styles.deviceBar}>
-          <View style={styles.devicePills}>
-            {deviceInfo.mac && (
-              <View style={styles.pill}>
-                <Text style={styles.pillLabel}>MAC</Text>
-                <Text style={styles.pillValue} numberOfLines={1}>
-                  {deviceInfo.mac}
-                </Text>
-              </View>
-            )}
-            {deviceInfo.ssid && (
-              <View style={styles.pill}>
-                <Text style={styles.pillLabel}>SSID</Text>
-                <Text style={styles.pillValue} numberOfLines={1}>
-                  {deviceInfo.ssid}
-                </Text>
-              </View>
-            )}
-          </View>
-
-          {/* Action buttons */}
-          <View style={styles.actionRow}>
-            {deviceInfo.jsonPath && (
-              <TouchableOpacity
-                style={styles.actionBtn}
-                activeOpacity={0.8}
-                onPress={() => {
-                  const url = `http://192.168.4.1${deviceInfo.jsonPath}`;
-                  import("react-native").then(({ Linking }) =>
-                    Linking.openURL(url),
-                  );
-                }}
-              >
-                <Text style={styles.actionBtnText}>{ }View JSON</Text>
-              </TouchableOpacity>
-            )}
-
-            {deviceInfo.restartPath && (
-              <TouchableOpacity
-                style={[styles.actionBtn, styles.actionBtnRestart]}
-                activeOpacity={0.8}
-                onPress={handleRestart}
-              >
-                <Text style={[styles.actionBtnText, styles.actionBtnRestartText]}>
-                  ⟳ Restart Device
-                </Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-      )}
-
-      {/* WiFi Connected — waiting for data */}
-      {status === "connected_wifi" && (
-        <View style={styles.wifiCard}>
-          <Text style={styles.wifiDot}>●</Text>
-          <View>
-            <Text style={styles.wifiTitle}>Device Connected</Text>
-            {wifiStatus && (
-              <Text style={styles.wifiSub}>{wifiStatus}</Text>
-            )}
-            <Text style={styles.wifiSub}>Waiting for first DLI reading…</Text>
-          </View>
-        </View>
-      )}
+      {/* Status stepper (hidden once we have data) */}
+      {renderStatusCard()}
 
       {/* DLI List */}
-      <FlatList
-        data={readings}
-        refreshControl={
-          <RefreshControl
-            refreshing={refreshing}
-            onRefresh={onRefresh}
-            tintColor={TEAL}
-            colors={[TEAL]}
-          />
-        }
-        keyExtractor={(_, index) => index.toString()}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}
-        ListHeaderComponent={
-          readings.length > 0 ? (
+      {status === "has_data" && (
+        <FlatList
+          data={readings}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              tintColor={TEAL}
+              colors={[TEAL]}
+            />
+          }
+          keyExtractor={(_, index) => index.toString()}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          ListHeaderComponent={
             <Text style={styles.listHeader}>{readings.length} readings</Text>
-          ) : null
-        }
-        ListEmptyComponent={
-          status !== "connected_wifi" ? (
-            <View style={styles.emptyBox}>
-              <Text style={styles.emptyIcon}>📡</Text>
-              <Text style={styles.emptyText}>No readings yet.</Text>
-              <Text style={styles.emptySubText}>
-                Data will appear once the device syncs.
-              </Text>
-            </View>
-          ) : null
-        }
-        renderItem={({ item, index }) => (
-          <View style={styles.card}>
-            <View style={styles.indexBadge}>
-              <Text style={styles.indexText}>#{index + 1}</Text>
-            </View>
-
-            <View style={styles.cardBody}>
-              <View style={styles.valueRow}>
-                <Text
-                  style={[
-                    styles.valueNumber,
-                    { color: getValueColor(item.value) },
-                  ]}
-                >
-                  {formatValue(item.value)}
-                </Text>
-                <Text style={styles.valueUnit}>mol/m²/d</Text>
+          }
+          renderItem={({ item, index }) => (
+            <View style={styles.card}>
+              <View style={styles.indexBadge}>
+                <Text style={styles.indexText}>#{index + 1}</Text>
               </View>
 
-              {(item.time || item.date) && (
-                <View style={styles.metaRow}>
-                  {item.time && (
-                    <View style={styles.metaChip}>
-                      <Text style={styles.metaLabel}>TIME</Text>
-                      <Text style={styles.metaValue}>{item.time}</Text>
-                    </View>
-                  )}
-                  {item.date && (
-                    <View style={styles.metaChip}>
-                      <Text style={styles.metaLabel}>DATE</Text>
-                      <Text style={styles.metaValue}>{item.date}</Text>
-                    </View>
-                  )}
+              <View style={styles.cardBody}>
+                <View style={styles.valueRow}>
+                  <Text
+                    style={[
+                      styles.valueNumber,
+                      { color: getValueColor(item.value) },
+                    ]}
+                  >
+                    {formatValue(item.value)}
+                  </Text>
+                  <Text style={styles.valueUnit}>mol/m²/d</Text>
                 </View>
-              )}
+
+                {(item.time || item.date) && (
+                  <View style={styles.metaRow}>
+                    {item.time && (
+                      <View style={styles.metaChip}>
+                        <Text style={styles.metaLabel}>TIME</Text>
+                        <Text style={styles.metaValue}>{item.time}</Text>
+                      </View>
+                    )}
+                    {item.date && (
+                      <View style={styles.metaChip}>
+                        <Text style={styles.metaLabel}>DATE</Text>
+                        <Text style={styles.metaValue}>{item.date}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </View>
             </View>
-          </View>
-        )}
-      />
+          )}
+        />
+      )}
     </View>
   );
 }
@@ -320,8 +327,6 @@ const styles = StyleSheet.create({
     backgroundColor: "#3B82F6",
     opacity: 0.1,
   },
-
-  // Header
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -363,92 +368,93 @@ const styles = StyleSheet.create({
     color: TEAL,
     fontWeight: "600",
   },
-
   divider: {
     height: 1,
     backgroundColor: "#1E3A5F",
     marginBottom: 14,
   },
 
-  // Device bar
-  deviceBar: {
+  // Status stepper card
+  statusCard: {
     backgroundColor: "#112240",
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
-    gap: 10,
-  },
-  devicePills: {
+    borderRadius: 16,
+    padding: 20,
     flexDirection: "row",
-    gap: 8,
-    flexWrap: "wrap",
+    gap: 14,
+    alignItems: "flex-start",
+    borderWidth: 1,
+    borderColor: "#1E3A5F",
   },
-  pill: {
-    backgroundColor: "#0B1F3A",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    flexDirection: "row",
-    gap: 6,
-    alignItems: "center",
-    flexShrink: 1,
-  },
-  pillLabel: {
-    fontSize: 9,
-    fontWeight: "800",
-    color: TEAL,
-    letterSpacing: 1,
-  },
-  pillValue: {
-    fontSize: 11,
-    color: "#FFFFFF",
-    fontWeight: "500",
-    flexShrink: 1,
-  },
-  actionRow: {
-    flexDirection: "row",
-    gap: 8,
-  },
-  actionBtn: {
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
     backgroundColor: TEAL,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    borderRadius: 10,
-    flex: 1,
-    alignItems: "center",
+    marginTop: 4,
   },
-  actionBtnText: {
-    color: NAVY,
+  statusContent: {
+    flex: 1,
+    gap: 16,
+  },
+  statusTitle: {
     fontSize: 12,
     fontWeight: "800",
-  },
-  actionBtnRestart: {
-    backgroundColor: "#2196F3",
-  },
-  actionBtnRestartText: {
     color: "#FFFFFF",
+    letterSpacing: 1,
+    textTransform: "uppercase",
+    marginBottom: 4,
   },
-
-  // WiFi status card
-  wifiCard: {
+  stepRow: {
     flexDirection: "row",
     alignItems: "flex-start",
-    gap: 10,
-    backgroundColor: "#0F2D1A",
-    borderWidth: 1,
+    gap: 12,
+  },
+  stepCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#0B1F3A",
+    borderWidth: 1.5,
+    borderColor: "#1E3A5F",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stepCircleActive: {
     borderColor: TEAL,
-    borderRadius: 12,
-    padding: 14,
-    marginBottom: 12,
+    backgroundColor: "#0B1F3A",
   },
-  wifiDot: { fontSize: 14, color: TEAL, marginTop: 1 },
-  wifiTitle: {
-    fontSize: 14,
+  stepCircleDone: {
+    borderColor: TEAL,
+    backgroundColor: TEAL,
+  },
+  stepCircleText: {
+    fontSize: 11,
     fontWeight: "700",
-    color: "#FFFFFF",
-    marginBottom: 2,
+    color: LABEL_COLOR,
   },
-  wifiSub: { fontSize: 12, color: LABEL_COLOR },
+  stepCircleTextActive: {
+    color: TEAL,
+  },
+  stepCircleTextDone: {
+    color: NAVY,
+  },
+  stepLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+    color: LABEL_COLOR,
+  },
+  stepLabelActive: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+  stepLabelDone: {
+    color: TEAL,
+  },
+  stepSub: {
+    fontSize: 11,
+    color: LABEL_COLOR,
+    marginTop: 2,
+  },
 
   // List
   listHeader: {
@@ -463,8 +469,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
     gap: 10,
   },
-
-  // Card
   card: {
     backgroundColor: CARD_BG,
     borderRadius: 16,
@@ -509,23 +513,5 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     color: NAVY,
     marginTop: 1,
-  },
-
-  // Empty
-  emptyBox: {
-    marginTop: 80,
-    alignItems: "center",
-    gap: 8,
-  },
-  emptyIcon: { fontSize: 40 },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  emptySubText: {
-    fontSize: 13,
-    color: LABEL_COLOR,
-    textAlign: "center",
   },
 });
