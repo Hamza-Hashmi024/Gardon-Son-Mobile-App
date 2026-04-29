@@ -3,19 +3,12 @@ import { AppCard } from "@/components/ui/AppCard";
 import { ScreenBackground } from "@/components/ui/ScreenBackground";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { colors, radius, spacing, typography } from "@/constants/design";
-import { getTimezoneLabel } from "@/constants/timezones";
 import { getHostingerDeviceData } from "@/services/api";
 import { extractSetupInfo } from "@/services/extracter";
 import { Feather } from "@expo/vector-icons";
 import { useRoute } from "@react-navigation/native";
 import { useEffect, useState } from "react";
-import { FlatList, RefreshControl, StyleSheet, Text, View } from "react-native";
-
-type DliReading = {
-  value: number;
-  time?: string;
-  date?: string;
-};
+import { StyleSheet, Text, View } from "react-native";
 
 type DeviceInfo = {
   mac: string | null;
@@ -36,11 +29,9 @@ export default function ReadingScreen({ navigation }: any) {
   const deviceData = (route.params as ReadingRouteParams | undefined)
     ?.deviceData;
 
-  const [readings, setReadings] = useState<DliReading[]>([]);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [status, setStatus] = useState<DeviceStatus>("idle");
   const [wifiStatus, setWifiStatus] = useState<string | null>(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   useEffect(() => {
@@ -57,7 +48,6 @@ export default function ReadingScreen({ navigation }: any) {
       const data = await getHostingerDeviceData(deviceInfo.mac);
 
       if (Array.isArray(data?.dli_history) && data.dli_history.length > 0) {
-        setReadings(data.dli_history);
         setStatus("has_data");
         setWifiStatus(null);
         const now = new Date();
@@ -71,9 +61,7 @@ export default function ReadingScreen({ navigation }: any) {
       } else if (data?.wifi_status) {
         setWifiStatus(data.wifi_status);
         setStatus("connected_wifi");
-        setReadings([]);
       } else {
-        setReadings([]);
         setStatus("idle");
       }
     } catch {}
@@ -85,25 +73,6 @@ export default function ReadingScreen({ navigation }: any) {
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, [deviceInfo?.mac]);
-
-  const onRefresh = async () => {
-    setRefreshing(true);
-    await fetchData();
-    setRefreshing(false);
-  };
-
-  const formatValue = (val: number): string => {
-    if (val === 0) return "0";
-    if (val < 0.01) return val.toFixed(5).replace(/\.?0+$/, "");
-    return val.toString();
-  };
-
-  const getValueColor = (val: number): string => {
-    if (val === 0) return colors.textMuted;
-    if (val >= 20) return colors.secondary;
-    if (val >= 5) return colors.accent;
-    return colors.warning;
-  };
 
   return (
     <ScreenBackground>
@@ -137,9 +106,7 @@ export default function ReadingScreen({ navigation }: any) {
             </View>
             <View style={styles.deviceRow}>
               <Text style={styles.deviceLabel}>TZ</Text>
-              <Text style={styles.deviceValue}>
-                {getTimezoneLabel(deviceInfo.timezone)}
-              </Text>
+              <Text style={styles.deviceValue}>{deviceInfo.timezone}</Text>
             </View>
 
             <View style={styles.buttonRow}>
@@ -148,7 +115,10 @@ export default function ReadingScreen({ navigation }: any) {
                   title="View JSON"
                   icon="file-text"
                   onPress={() => {
-                    navigation.navigate("LiveReadings", { deviceData });
+                    const url = `http://192.168.4.1${deviceInfo.jsonPath}`;
+                    import("react-native").then(({ Linking }) =>
+                      Linking.openURL(url),
+                    );
                   }}
                   style={styles.compactButton}
                 />
@@ -193,74 +163,6 @@ export default function ReadingScreen({ navigation }: any) {
           </View>
         )}
 
-        <FlatList
-          data={readings}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={onRefresh}
-              tintColor={colors.secondary}
-              colors={[colors.secondary]}
-            />
-          }
-          keyExtractor={(_, index) => index.toString()}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            readings.length > 0 ? (
-              <Text style={styles.listHeader}>{readings.length} readings</Text>
-            ) : null
-          }
-          ListEmptyComponent={
-            status !== "connected_wifi" ? (
-              <View style={styles.emptyBox}>
-                <Feather name="bar-chart-2" size={28} color={colors.textMuted} />
-                <Text style={styles.emptyText}>No readings yet.</Text>
-                <Text style={styles.emptySubText}>
-                  Data will appear once the device syncs.
-                </Text>
-              </View>
-            ) : null
-          }
-          renderItem={({ item, index }) => (
-            <AppCard style={styles.card}>
-              <View style={styles.indexBadge}>
-                <Text style={styles.indexText}>#{index + 1}</Text>
-              </View>
-
-              <View style={styles.cardBody}>
-                <View style={styles.valueRow}>
-                  <Text
-                    style={[
-                      styles.valueNumber,
-                      { color: getValueColor(item.value) },
-                    ]}
-                  >
-                    {formatValue(item.value)}
-                  </Text>
-                  <Text style={styles.valueUnit}>mol/m2/d</Text>
-                </View>
-
-                {(item.time || item.date) && (
-                  <View style={styles.metaRow}>
-                    {item.time && (
-                      <View style={styles.metaChip}>
-                        <Text style={styles.metaLabel}>TIME</Text>
-                        <Text style={styles.metaValue}>{item.time}</Text>
-                      </View>
-                    )}
-                    {item.date && (
-                      <View style={styles.metaChip}>
-                        <Text style={styles.metaLabel}>DATE</Text>
-                        <Text style={styles.metaValue}>{item.date}</Text>
-                      </View>
-                    )}
-                  </View>
-                )}
-              </View>
-            </AppCard>
-          )}
-        />
       </View>
     </ScreenBackground>
   );
@@ -347,89 +249,5 @@ const styles = StyleSheet.create({
   wifiSub: {
     fontSize: 12,
     color: colors.textMuted,
-  },
-  listHeader: {
-    ...typography.label,
-    color: colors.textMuted,
-    marginBottom: spacing.md,
-    textTransform: "uppercase",
-  },
-  listContent: {
-    paddingBottom: 40,
-    gap: spacing.md,
-  },
-  card: {
-    borderRadius: radius.lg,
-    padding: spacing.lg,
-    flexDirection: "row",
-    gap: spacing.md,
-  },
-  indexBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: colors.primary,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  indexText: {
-    fontSize: 11,
-    fontWeight: "700",
-    color: colors.secondary,
-  },
-  cardBody: {
-    flex: 1,
-    gap: spacing.sm,
-  },
-  valueRow: {
-    flexDirection: "row",
-    alignItems: "baseline",
-    gap: 6,
-  },
-  valueNumber: {
-    fontSize: 28,
-    fontWeight: "800",
-  },
-  valueUnit: {
-    fontSize: 12,
-    color: colors.textMuted,
-  },
-  metaRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
-  },
-  metaChip: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radius.sm,
-    paddingHorizontal: spacing.md,
-    paddingVertical: 6,
-    flex: 1,
-  },
-  metaLabel: {
-    fontSize: 9,
-    fontWeight: "700",
-    color: colors.textMuted,
-    letterSpacing: 0.8,
-  },
-  metaValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: colors.text,
-    marginTop: 1,
-  },
-  emptyBox: {
-    marginTop: 80,
-    alignItems: "center",
-    gap: spacing.sm,
-  },
-  emptyText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: colors.textInverse,
-  },
-  emptySubText: {
-    fontSize: 13,
-    color: colors.textMuted,
-    textAlign: "center",
   },
 });
