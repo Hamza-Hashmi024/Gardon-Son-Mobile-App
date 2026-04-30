@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Garden-Son",
+    "name": "Garden Sun",
     "slug": "garden-son",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.solutyics.gardenson"
+      "bundleIdentifier": "com.tilspark.gardenson"
     },
     "android": {
       "adaptiveIcon": {
@@ -18,7 +18,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.solutyics.gardenson"
+      "package": "com.tilspark.gardenson"
     },
     "web": {
       "output": "static",
@@ -35,6 +35,13 @@
           "backgroundColor": "#ffffff"
         }
       ]
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "111042f9-dd25-464f-b5f1-b3a0d7021aff"
+      }
+    },
+    "owner": "hamza_hamza064"
   }
 }
