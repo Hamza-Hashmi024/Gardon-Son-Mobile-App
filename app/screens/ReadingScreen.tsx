@@ -6,6 +6,7 @@ import { colors, radius, spacing, typography } from "@/constants/design";
 import { getHostingerDeviceData } from "@/services/api";
 import { extractSetupInfo } from "@/services/extracter";
 import { Feather } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRoute } from "@react-navigation/native";
 import { useEffect, useState } from "react";
 import { StyleSheet, Text, View } from "react-native";
@@ -73,6 +74,11 @@ export default function ReadingScreen({ navigation }: any) {
     const interval = setInterval(fetchData, 5000);
     return () => clearInterval(interval);
   }, [deviceInfo?.mac]);
+
+  const handleReconfigure = async () => {
+    await AsyncStorage.removeItem("deviceJsonFile");
+    navigation.replace("Connection");
+  };
 
   return (
     <ScreenBackground>
@@ -163,6 +169,14 @@ export default function ReadingScreen({ navigation }: any) {
           </View>
         )}
 
+        <AppButton
+          title="Configure Device"
+          icon="settings"
+          variant="secondary"
+          onPress={handleReconfigure}
+          style={styles.configureButton}
+        />
+
       </View>
     </ScreenBackground>
   );
@@ -249,5 +263,8 @@ const styles = StyleSheet.create({
   wifiSub: {
     fontSize: 12,
     color: colors.textMuted,
+  },
+  configureButton: {
+    marginTop: spacing.md,
   },
 });

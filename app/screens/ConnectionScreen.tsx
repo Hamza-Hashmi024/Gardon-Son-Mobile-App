@@ -4,6 +4,7 @@ import { ScreenBackground } from "@/components/ui/ScreenBackground";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
 import { colors, spacing, typography } from "@/constants/design";
 import { checkDeviceConnection } from "@/services/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useCallback, useEffect, useState } from "react";
 import { AppState, Platform, StyleSheet, Text, View } from "react-native";
 import * as Linking from "expo-linking";
@@ -19,7 +20,14 @@ export default function ConnectionScreen({ navigation }: any) {
     const isConnected = await checkDeviceConnection();
 
     if (isConnected) {
-      navigation.replace("Setup");
+      // If device was already configured, skip setup and go straight to readings
+      const deviceJsonFile = await AsyncStorage.getItem("deviceJsonFile");
+      if (deviceJsonFile) {
+        const mac = deviceJsonFile.replace(/\.json$/i, "");
+        navigation.replace("LiveReadings", { mac });
+      } else {
+        navigation.replace("Setup");
+      }
       return;
     }
 

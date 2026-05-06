@@ -1,3 +1,4 @@
+import { AppButton } from "@/components/ui/AppButton";
 import { AppCard } from "@/components/ui/AppCard";
 import { ScreenBackground } from "@/components/ui/ScreenBackground";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -5,6 +6,7 @@ import { colors, radius, spacing, typography } from "@/constants/design";
 import { getHostingerDeviceData } from "@/services/api";
 import { extractSetupInfo } from "@/services/extracter";
 import { Feather } from "@expo/vector-icons";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useRoute } from "@react-navigation/native";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -33,20 +35,29 @@ type DeviceInfo = {
 
 type LiveReadingsRouteParams = {
   deviceData?: string;
+  // Passed when navigating directly from AsyncStorage (skipping setup)
+  mac?: string;
 };
 
 type DeviceStatus = "connecting_wifi" | "waiting_dli" | "has_data";
 
-export default function LiveReadingsScreen() {
+export default function LiveReadingsScreen({ navigation }: any) {
   const route = useRoute();
-  const deviceData = (route.params as LiveReadingsRouteParams | undefined)
-    ?.deviceData;
+  const params = route.params as LiveReadingsRouteParams | undefined;
+  const deviceData = params?.deviceData;
+  const routeMac = params?.mac;
+
+  // True when opened from AsyncStorage bypass (no fresh setup HTML available)
+  const isRestoredSession = !deviceData && !!routeMac;
 
   const [readings, setReadings] = useState<DliReading[]>([]);
   const [deviceInfo, setDeviceInfo] = useState<DeviceInfo | null>(null);
   const [status, setStatus] = useState<DeviceStatus>("connecting_wifi");
   const [refreshing, setRefreshing] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+
+  // Tracks consecutive Hostinger API failures on a restored session
+  const apiFailureCount = useRef(0);
 
   const pulseAnim = useRef(new Animated.Value(0.4)).current;
   useEffect(() => {
@@ -72,14 +83,18 @@ export default function LiveReadingsScreen() {
     if (deviceData) {
       const parsed = extractSetupInfo(deviceData);
       setDeviceInfo(parsed);
+    } else if (routeMac) {
+      // Restored from AsyncStorage — only MAC is available
+      setDeviceInfo({ mac: routeMac, ssid: null, timezone: null, jsonPath: null, restartPath: null });
     }
-  }, [deviceData]);
+  }, [deviceData, routeMac]);
 
   const fetchData = async () => {
     if (!deviceInfo?.mac) return;
 
     try {
       const data = await getHostingerDeviceData(deviceInfo.mac);
+      apiFailureCount.current = 0;
 
       if (Array.isArray(data?.dli_history) && data.dli_history.length > 0) {
         setReadings(data.dli_history);
@@ -97,8 +112,22 @@ export default function LiveReadingsScreen() {
         setReadings([]);
       }
     } catch {
+      // On a restored session, persistent failures mean the file is gone — reset
+      if (isRestoredSession) {
+        apiFailureCount.current += 1;
+        if (apiFailureCount.current >= 3) {
+          await AsyncStorage.removeItem("deviceJsonFile");
+          navigation.replace("Connection");
+          return;
+        }
+      }
       setStatus("connecting_wifi");
     }
+  };
+
+  const handleReconfigure = async () => {
+    await AsyncStorage.removeItem("deviceJsonFile");
+    navigation.replace("Connection");
   };
 
   useEffect(() => {
@@ -215,6 +244,14 @@ export default function LiveReadingsScreen() {
               </View>
             ) : null
           }
+        />
+
+        <AppButton
+          title="Configure Device"
+          icon="settings"
+          variant="secondary"
+          onPress={handleReconfigure}
+          style={styles.configureButton}
         />
 
         <View style={styles.divider} />
@@ -384,6 +421,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: colors.textMuted,
     marginTop: 2,
+  },
+  configureButton: {
+    marginBottom: spacing.md,
   },
   listHeader: {
     ...typography.label,

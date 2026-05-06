@@ -7,6 +7,7 @@ import { TimezoneSelect } from "@/components/ui/TimezoneSelect";
 import { colors, spacing, typography } from "@/constants/design";
 import { getTimezoneLabel } from "@/constants/timezones";
 import { sendDeviceConfig } from "@/services/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { useState } from "react";
 import { Alert, StyleSheet, Text, View } from "react-native";
 
@@ -20,6 +21,15 @@ export default function SetupScreen({ navigation }: any) {
     try {
       setIsSubmitting(true);
       const result = await sendDeviceConfig(ssid, password, timezone);
+
+      // Extract JSON filename from HTML response (e.g. "/F024F92CDA10.json" → "F024F92CDA10.json")
+      const jsonFilenameMatch = result.responseText.match(
+        /JSON File:<\/strong>\s*\/([^\s<]+)/i,
+      );
+      const deviceJsonFile =
+        jsonFilenameMatch?.[1]?.trim() ?? `${result.mac}.json`;
+      await AsyncStorage.setItem("deviceJsonFile", deviceJsonFile);
+
       Alert.alert(
         "Device Setup",
         `Setup complete. SSID "${result.storedConfig.ssid}" and timezone "${getTimezoneLabel(result.storedConfig.timezone)}" are stored on the Garden Sun device.`,
