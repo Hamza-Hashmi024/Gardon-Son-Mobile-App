@@ -1,4 +1,5 @@
 import { AppButton } from "@/components/ui/AppButton";
+import { BottomPillNavigation } from "@/components/ui/BottomPillNavigation";
 import { AppCard } from "@/components/ui/AppCard";
 import { ScreenBackground } from "@/components/ui/ScreenBackground";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -145,14 +146,6 @@ export default function HistoryScreen({ navigation }: any) {
           }
         />
 
-        <AppButton
-          title="Back to Live"
-          icon="arrow-left"
-          variant="secondary"
-          onPress={() => navigation.goBack()}
-          style={styles.backButton}
-        />
-
         <View style={styles.divider} />
 
         {renderStateCard()}
@@ -216,6 +209,25 @@ export default function HistoryScreen({ navigation }: any) {
             )}
           />
         )}
+
+        <BottomPillNavigation
+          items={[
+            {
+              key: "live",
+              label: "Live",
+              icon: "sun",
+              active: false,
+              onPress: () => navigation.navigate("LiveReadings", { mac }),
+            },
+            {
+              key: "history",
+              label: "History",
+              icon: "clock",
+              active: true,
+              onPress: () => {},
+            },
+          ]}
+        />
       </View>
     </ScreenBackground>
   );
@@ -246,9 +258,6 @@ const styles = StyleSheet.create({
     color: colors.secondary,
     fontWeight: "700",
   },
-  backButton: {
-    marginBottom: spacing.md,
-  },
   stateCard: {
     borderRadius: radius.lg,
     padding: spacing.xl,
@@ -269,7 +278,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   listContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
     gap: spacing.md,
   },
   card: {

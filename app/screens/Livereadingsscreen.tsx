@@ -1,4 +1,4 @@
-import { AppButton } from "@/components/ui/AppButton";
+import { BottomPillNavigation } from "@/components/ui/BottomPillNavigation";
 import { AppCard } from "@/components/ui/AppCard";
 import { ScreenBackground } from "@/components/ui/ScreenBackground";
 import { ScreenHeader } from "@/components/ui/ScreenHeader";
@@ -11,6 +11,7 @@ import { useRoute } from "@react-navigation/native";
 import { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Alert,
   Easing,
   FlatList,
   RefreshControl,
@@ -128,6 +129,23 @@ export default function LiveReadingsScreen({ navigation }: any) {
   const handleReconfigure = async () => {
     await AsyncStorage.removeItem("deviceJsonFile");
     navigation.replace("Connection");
+  };
+
+  const confirmReconfigure = () => {
+    Alert.alert(
+      "Configure New Device?",
+      "You are about to configure a new device. This may replace the current device connection details. Do you want to continue?",
+      [
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+        {
+          text: "Continue",
+          onPress: handleReconfigure,
+        },
+      ],
+    );
   };
 
   const handleOpenHistory = () => {
@@ -252,23 +270,6 @@ export default function LiveReadingsScreen({ navigation }: any) {
           }
         />
 
-        <AppButton
-          title="Configure Device"
-          icon="settings"
-          variant="secondary"
-          onPress={handleReconfigure}
-          style={styles.configureButton}
-        />
-
-        <AppButton
-          title="Reading History"
-          icon="clock"
-          variant="secondary"
-          onPress={handleOpenHistory}
-          disabled={!deviceInfo?.mac}
-          style={styles.historyButton}
-        />
-
         <View style={styles.divider} />
 
         {renderStatusCard()}
@@ -330,6 +331,32 @@ export default function LiveReadingsScreen({ navigation }: any) {
             )}
           />
         )}
+
+        <BottomPillNavigation
+          items={[
+            {
+              key: "live",
+              label: "Live",
+              icon: "sun",
+              active: true,
+              onPress: () => {},
+            },
+            {
+              key: "history",
+              label: "History",
+              icon: "clock",
+              active: false,
+              onPress: handleOpenHistory,
+            },
+            {
+              key: "config",
+              label: "Config",
+              icon: "settings",
+              active: false,
+              onPress: confirmReconfigure,
+            },
+          ]}
+        />
       </View>
     </ScreenBackground>
   );
@@ -437,12 +464,6 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     marginTop: 2,
   },
-  configureButton: {
-    marginBottom: spacing.md,
-  },
-  historyButton: {
-    marginBottom: spacing.md,
-  },
   listHeader: {
     ...typography.label,
     color: colors.textMuted,
@@ -450,7 +471,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
   },
   listContent: {
-    paddingBottom: 40,
+    paddingBottom: 120,
     gap: spacing.md,
   },
   card: {
