@@ -49,7 +49,7 @@ export default function HistoryScreen({ navigation }: any) {
 
       if (!storedMac) {
         setStatus("error");
-        setErrorMessage("No device MAC address found.");
+        setErrorMessage("No configured device found.");
       }
     };
 
@@ -59,7 +59,7 @@ export default function HistoryScreen({ navigation }: any) {
   const fetchHistory = useCallback(async () => {
     if (!mac) {
       setStatus("error");
-      setErrorMessage("No device MAC address found.");
+      setErrorMessage("No configured device found.");
       return;
     }
 

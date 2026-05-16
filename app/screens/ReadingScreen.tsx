@@ -103,10 +103,6 @@ export default function ReadingScreen({ navigation }: any) {
         {deviceInfo && (
           <AppCard tone="dark" style={styles.deviceBox}>
             <View style={styles.deviceRow}>
-              <Text style={styles.deviceLabel}>MAC</Text>
-              <Text style={styles.deviceValue}>{deviceInfo.mac}</Text>
-            </View>
-            <View style={styles.deviceRow}>
               <Text style={styles.deviceLabel}>SSID</Text>
               <Text style={styles.deviceValue}>{deviceInfo.ssid}</Text>
             </View>
