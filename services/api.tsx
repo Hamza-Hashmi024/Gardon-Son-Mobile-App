@@ -1,6 +1,7 @@
 export const DEVICE_IP = "http://192.168.4.1";
 
 const HOSTINGER_BASE_URL = "https://umerdesigns.com/dli/data";
+const HOSTINGER_HISTORY_BASE_URL = "https://umerdesigns.com/dli/history";
 
 type StoredDeviceConfig = {
   ssid: string | null;
@@ -172,4 +173,19 @@ export const getHostingerDeviceData = async (mac: string) => {
   }
 
   throw new Error("Hostinger file not ready after retries");
+};
+
+export const getHostingerDeviceHistory = async (mac: string) => {
+  if (!mac) {
+    throw new Error("MAC is required");
+  }
+
+  const url = `${HOSTINGER_HISTORY_BASE_URL}/${mac}.json`;
+  const response = await fetchWithTimeout(url);
+
+  if (!response.ok) {
+    throw new Error("Hostinger history file not ready");
+  }
+
+  return response.json();
 };

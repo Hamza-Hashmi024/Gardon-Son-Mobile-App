@@ -130,6 +130,12 @@ export default function LiveReadingsScreen({ navigation }: any) {
     navigation.replace("Connection");
   };
 
+  const handleOpenHistory = () => {
+    if (!deviceInfo?.mac) return;
+
+    navigation.navigate("History", { mac: deviceInfo.mac });
+  };
+
   useEffect(() => {
     if (!deviceInfo?.mac) return;
     fetchData();
@@ -252,6 +258,15 @@ export default function LiveReadingsScreen({ navigation }: any) {
           variant="secondary"
           onPress={handleReconfigure}
           style={styles.configureButton}
+        />
+
+        <AppButton
+          title="Reading History"
+          icon="clock"
+          variant="secondary"
+          onPress={handleOpenHistory}
+          disabled={!deviceInfo?.mac}
+          style={styles.historyButton}
         />
 
         <View style={styles.divider} />
@@ -423,6 +438,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   configureButton: {
+    marginBottom: spacing.md,
+  },
+  historyButton: {
     marginBottom: spacing.md,
   },
   listHeader: {

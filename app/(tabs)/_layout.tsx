@@ -5,9 +5,10 @@ import SetupScreen from "../screens/SetupScreen";
 import ReadingScreen from "../screens/ReadingScreen";
 import PostRestartScreen from "../screens/Postrestartscreen";
 import LiveReadingsScreen from "../screens/Livereadingsscreen";
- 
+import HistoryScreen from "../screens/HistoryScreen";
+
 const Stack = createNativeStackNavigator();
- 
+
 export default function RootLayout() {
   return (
     <Stack.Navigator
@@ -19,7 +20,7 @@ export default function RootLayout() {
       <Stack.Screen name="Dashboard" component={ReadingScreen} />
       <Stack.Screen name="PostRestart" component={PostRestartScreen} />
       <Stack.Screen name="LiveReadings" component={LiveReadingsScreen} />
+      <Stack.Screen name="History" component={HistoryScreen} />
     </Stack.Navigator>
   );
 }
- 
