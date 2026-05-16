@@ -17,17 +17,19 @@ export default function ConnectionScreen({ navigation }: any) {
     setIsChecking(true);
     setErrorMessage("");
 
+    // Check AsyncStorage FIRST — if already configured, skip WiFi check entirely
+    const deviceJsonFile = await AsyncStorage.getItem("deviceJsonFile");
+    if (deviceJsonFile) {
+      const mac = deviceJsonFile.replace(/\.json$/i, "");
+      navigation.replace("LiveReadings", { mac });
+      return;
+    }
+
+    // No saved config — must be first-time setup, device must be in AP mode
     const isConnected = await checkDeviceConnection();
 
     if (isConnected) {
-      // If device was already configured, skip setup and go straight to readings
-      const deviceJsonFile = await AsyncStorage.getItem("deviceJsonFile");
-      if (deviceJsonFile) {
-        const mac = deviceJsonFile.replace(/\.json$/i, "");
-        navigation.replace("LiveReadings", { mac });
-      } else {
-        navigation.replace("Setup");
-      }
+      navigation.replace("Setup");
       return;
     }
 
