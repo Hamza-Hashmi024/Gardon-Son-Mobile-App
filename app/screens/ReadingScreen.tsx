@@ -115,44 +115,29 @@ export default function ReadingScreen({ navigation }: any) {
               <Text style={styles.deviceValue}>{deviceInfo.timezone}</Text>
             </View>
 
-            <View style={styles.buttonRow}>
-              {deviceInfo.jsonPath && (
-                <AppButton
-                  title="View JSON"
-                  icon="file-text"
-                  onPress={() => {
-                    const url = `http://192.168.4.1${deviceInfo.jsonPath}`;
-                    import("react-native").then(({ Linking }) =>
-                      Linking.openURL(url),
-                    );
-                  }}
-                  style={styles.compactButton}
-                />
-              )}
-              {deviceInfo.restartPath && (
-                <AppButton
-                  title="Restart"
-                  icon="power"
-                  variant="accent"
-                  onPress={async () => {
-                    try {
-                      const restartUrl = `http://192.168.4.1${deviceInfo.restartPath}`;
-                      await fetch(restartUrl, {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/x-www-form-urlencoded",
-                        },
-                        body: "restart=true",
-                      });
-                    } catch {
-                    } finally {
-                      navigation.replace("PostRestart", { deviceData });
-                    }
-                  }}
-                  style={styles.compactButton}
-                />
-              )}
-            </View>
+            {deviceInfo.restartPath && (
+              <AppButton
+                title="Restart"
+                icon="power"
+                variant="accent"
+                onPress={async () => {
+                  try {
+                    const restartUrl = `http://192.168.4.1${deviceInfo.restartPath}`;
+                    await fetch(restartUrl, {
+                      method: "POST",
+                      headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                      },
+                      body: "restart=true",
+                    });
+                  } catch {
+                  } finally {
+                    navigation.replace("PostRestart", { deviceData });
+                  }
+                }}
+                style={styles.restartButton}
+              />
+            )}
           </AppCard>
         )}
 
@@ -231,13 +216,8 @@ const styles = StyleSheet.create({
     color: colors.textInverse,
     flex: 1,
   },
-  buttonRow: {
-    flexDirection: "row",
-    gap: spacing.sm,
+  restartButton: {
     marginTop: spacing.md,
-  },
-  compactButton: {
-    flex: 1,
     minHeight: 44,
   },
   wifiCard: {
