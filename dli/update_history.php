@@ -46,10 +46,25 @@ function read_json_file(string $path, array &$summary): ?array
     return $decoded;
 }
 
+function is_valid_dli_reading(array $reading): bool
+{
+    if (
+        !array_key_exists('value', $reading) ||
+        !array_key_exists('date', $reading) ||
+        !array_key_exists('time', $reading)
+    ) {
+        return false;
+    }
+
+    return trim((string) $reading['date']) !== '' && trim((string) $reading['time']) !== '';
+}
+
 function get_readings(array $data): array
 {
     return isset($data['dli_history']) && is_array($data['dli_history'])
-        ? array_values(array_filter($data['dli_history'], 'is_array'))
+        ? array_values(array_filter($data['dli_history'], static function ($reading): bool {
+            return is_array($reading) && is_valid_dli_reading($reading);
+        }))
         : [];
 }
 
@@ -94,10 +109,9 @@ function reading_duplicate_key(array $reading): string
     $hasValue = array_key_exists('value', $reading);
 
     if ($hasDate && $hasTime && $hasValue) {
-        return 'date_time_value|' .
+        return 'date_time|' .
             normalize_key_value($reading['date']) . '|' .
-            normalize_key_value($reading['time']) . '|' .
-            normalize_key_value($reading['value']);
+            normalize_key_value($reading['time']);
     }
 
     foreach (['timestamp', 'datetime', 'created_at', 'createdAt'] as $field) {
@@ -146,23 +160,17 @@ function reading_sort_value(array $reading): ?int
 
 function merge_readings(array $historyReadings, array $liveReadings): array
 {
-    $existingCounts = [];
+    $seen = [];
+    $merged = [];
 
-    foreach ($historyReadings as $reading) {
-        $key = reading_duplicate_key($reading);
-        $existingCounts[$key] = ($existingCounts[$key] ?? 0) + 1;
-    }
-
-    $merged = $historyReadings;
-
-    foreach ($liveReadings as $reading) {
+    foreach (array_merge($historyReadings, $liveReadings) as $reading) {
         $key = reading_duplicate_key($reading);
 
-        if (($existingCounts[$key] ?? 0) > 0) {
-            $existingCounts[$key]--;
+        if (isset($seen[$key])) {
             continue;
         }
 
+        $seen[$key] = true;
         $merged[] = $reading;
     }
 

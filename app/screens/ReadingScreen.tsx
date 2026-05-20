@@ -25,6 +25,18 @@ type ReadingRouteParams = {
 
 type DeviceStatus = "idle" | "connected_wifi" | "has_data";
 
+const hasValidDliReading = (readings: unknown): boolean =>
+  Array.isArray(readings) &&
+  readings.some(
+    (reading) =>
+      typeof reading?.value === "number" &&
+      Number.isFinite(reading.value) &&
+      typeof reading.date === "string" &&
+      reading.date.trim().length > 0 &&
+      typeof reading.time === "string" &&
+      reading.time.trim().length > 0,
+  );
+
 export default function ReadingScreen({ navigation }: any) {
   const route = useRoute();
   const deviceData = (route.params as ReadingRouteParams | undefined)
@@ -48,7 +60,7 @@ export default function ReadingScreen({ navigation }: any) {
     try {
       const data = await getHostingerDeviceData(deviceInfo.mac);
 
-      if (Array.isArray(data?.dli_history) && data.dli_history.length > 0) {
+      if (hasValidDliReading(data?.dli_history)) {
         setStatus("has_data");
         setWifiStatus(null);
         const now = new Date();

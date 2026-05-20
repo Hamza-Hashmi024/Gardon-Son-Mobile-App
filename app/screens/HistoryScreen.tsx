@@ -18,8 +18,8 @@ import {
 
 type DliReading = {
   value: number;
-  time?: string;
-  date?: string;
+  time: string;
+  date: string;
 };
 
 type HistoryRouteParams = {
@@ -27,6 +27,14 @@ type HistoryRouteParams = {
 };
 
 type HistoryStatus = "loading" | "ready" | "empty" | "error";
+
+const isValidDliReading = (reading: Partial<DliReading> | null | undefined): reading is DliReading =>
+  typeof reading?.value === "number" &&
+  Number.isFinite(reading.value) &&
+  typeof reading.date === "string" &&
+  reading.date.trim().length > 0 &&
+  typeof reading.time === "string" &&
+  reading.time.trim().length > 0;
 
 export default function HistoryScreen({ navigation }: any) {
   const route = useRoute();
@@ -68,6 +76,7 @@ export default function HistoryScreen({ navigation }: any) {
       const data = await getHostingerDeviceHistory(mac);
       const nextReadings = Array.isArray(data?.dli_history)
         ? data.dli_history
+            .filter(isValidDliReading)
         : [];
 
       setReadings(nextReadings);
@@ -111,7 +120,7 @@ export default function HistoryScreen({ navigation }: any) {
       status === "loading"
         ? "Loading reading history..."
         : status === "empty"
-          ? "No history readings found yet."
+          ? "No valid DLI history available yet."
           : errorMessage;
 
     return (
@@ -162,7 +171,7 @@ export default function HistoryScreen({ navigation }: any) {
               />
             }
             keyExtractor={(item, index) =>
-              `${item.date ?? "no-date"}-${item.time ?? "no-time"}-${item.value}-${index}`
+              `${item.date}-${item.time}-${item.value}-${index}`
             }
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}

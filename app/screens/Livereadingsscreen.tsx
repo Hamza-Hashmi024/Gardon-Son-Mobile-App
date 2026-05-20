@@ -22,8 +22,8 @@ import {
 
 type DliReading = {
   value: number;
-  time?: string;
-  date?: string;
+  time: string;
+  date: string;
 };
 
 type DeviceInfo = {
@@ -41,6 +41,14 @@ type LiveReadingsRouteParams = {
 };
 
 type DeviceStatus = "connecting_wifi" | "waiting_dli" | "has_data";
+
+const isValidDliReading = (reading: Partial<DliReading> | null | undefined): reading is DliReading =>
+  typeof reading?.value === "number" &&
+  Number.isFinite(reading.value) &&
+  typeof reading.date === "string" &&
+  reading.date.trim().length > 0 &&
+  typeof reading.time === "string" &&
+  reading.time.trim().length > 0;
 
 export default function LiveReadingsScreen({ navigation }: any) {
   const route = useRoute();
@@ -97,8 +105,12 @@ export default function LiveReadingsScreen({ navigation }: any) {
       const data = await getHostingerDeviceData(deviceInfo.mac);
       apiFailureCount.current = 0;
 
-      if (Array.isArray(data?.dli_history) && data.dli_history.length > 0) {
-        setReadings(data.dli_history);
+      const nextReadings = Array.isArray(data?.dli_history)
+        ? data.dli_history.filter(isValidDliReading)
+        : [];
+
+      if (nextReadings.length > 0) {
+        setReadings(nextReadings);
         setStatus("has_data");
         const now = new Date();
         setLastUpdated(
@@ -109,6 +121,9 @@ export default function LiveReadingsScreen({ navigation }: any) {
           }),
         );
       } else if (data?.wifi_status) {
+        setStatus("waiting_dli");
+        setReadings([]);
+      } else {
         setStatus("waiting_dli");
         setReadings([]);
       }
